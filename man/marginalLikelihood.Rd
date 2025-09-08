@@ -89,13 +89,8 @@ optim_maxit, initpar='none', B=10^5, logscale=TRUE, XtX, ytX)
   Useful when the function must be called a large number of times.}
 \item{ytX}{Optionally, specify the vector y'X.
   Useful when the function must be called a large number of times.}
-\item{phi}{Disperson parameter. See \code{help(modelSelection)}}
-\item{alpha}{Prior for phi is inverse gamma \code{alpha/2},
-  \code{lambda/2}}
-\item{lambda}{Prior for phi is inverse gamma \code{alpha/2},
-  \code{lambda/2}}
-\item{tau}{Prior dispersion parameter for MOM and iMOM priors (see details)}
-\item{r}{Prior power parameter for MOM prior is \code{2*r}}
+\item{phi}{If the disperson parameter (e.g. error variance) is known, it
+  can be specified here. Leave blank unless you know what you're doing}
 }
 \details{
   The marginal density of the data y under a given model is

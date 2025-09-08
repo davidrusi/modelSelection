@@ -1,5 +1,5 @@
 context("Test msfit methods")
-library("mombf")
+library("modelSelection")
 
 source(test_path("data-for-tests.R"))
 tolerance <- 1e-6
@@ -24,7 +24,8 @@ test_that(
 test_that(
   "msfit predict method works", {
     log <- capture.output(
-      fit <- modelSelection(y3~X3[,2]+X3[,3]+X3[,4]),
+      fit <- modelSelection(y3 ~ .,
+      data = data.frame(y3, X3[,2:4])),
       ypred <- predict(fit)
     )
     expect_equal(names(ypred[1,])[1], "mean")

@@ -120,12 +120,11 @@ See http://rosselldavid.googlepages.com for technical
   reports. }
 \author{ David Rossell }
 \examples{
-#evaluate and plot the moment and inverse moment priors
-library(mombf)
+#evaluate and plot moment and inverse moment prior densities
 tau <- 1
-thseq <- seq(-3,3,length=1000)
-plot(thseq,dmom(thseq,tau=tau),type='l',ylab='Prior density')
-lines(thseq,dimom(thseq,tau=tau),lty=2,col=2)
+thseq <- seq(-3, 3, length=500)
+plot(thseq, dmom(thseq,tau=tau), type='l', ylab='Prior density')
+lines(thseq, dimom(thseq,tau=tau), lty=2, col=2)
 }
 \keyword{ distribution }
 \keyword{ htest }

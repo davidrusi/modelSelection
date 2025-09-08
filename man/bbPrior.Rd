@@ -56,7 +56,6 @@ constraints=lapply(1:length(unique(groups)), function(z) integer(0)))
 }
 \author{ David Rossell }
 \examples{
-library(mombf)
 sel <- c(TRUE,TRUE,FALSE,FALSE)
 unifPrior(sel,logscale=FALSE)
 binomPrior(sel,prob=.5,logscale=FALSE)

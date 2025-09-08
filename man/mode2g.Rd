@@ -41,8 +41,6 @@ priorp2g(priorp, q, nu=1, prior=c("iMom", "normalMom", "tMom"))
   \code{\link{pimom}}
 }
 \examples{
-data(hald)
-lm1 <- lm(hald[, 1] ~ hald[, 2] + hald[, 3] + hald[, 4] + hald[, 5])
 
 #find g value giving 0.05 probability to interval (-.2,.2)
 priorp <- .05; q <- .2
@@ -50,6 +48,7 @@ gmom <- priorp2g(priorp=priorp, q=q, prior='normalMom')
 gimom <- priorp2g(priorp=priorp, q=q, prior='iMom')
 gmom
 gimom
+
 }
 \keyword{distribution}
 \keyword{htest}

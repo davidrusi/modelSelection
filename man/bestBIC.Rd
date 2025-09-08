@@ -31,27 +31,41 @@ Model with best AIC, BIC, EBIC or other general information criteria (getIC)
   and \code{help(icfit-class)} for more details on the returned object.
 }
 \details{
-  For details on the information criteria see help(getBIC).
 
-  Function modelSelection returns the log posterior probability of a
-  model, postProb = log(m_k) + log(prior k), where m_k is the marginal
-  likelihood of the model and prior k its prior probability.
+  When there are too many models to be enumerated, these are searched
+  with MCMC as discussed in function \code{modelSelection}.
+  \code{bestBIC} and the other functions codumented here take similar
+  arguments to those of \code{modelSelection}, the primary difference is
+  that no priors on models or parameters are needed.
   
-  When running function modelSelection with priorCoef=bicprior()
-  and priorDelta=modelunifprior(), the BIC approximation is used for
-  m_k, that is
+  Let p be the total number of parameters and n the sample size. The BIC of a model k with p_k
+  parameters is
+
+  - 2 L_k + p_k log(n)
+
+  the AIC is
   
-  log(m_k) = L_k - 0.5 * p_k log(n)
+  - 2 L_k + p_k 2
+  
+  the EBIC is
 
-  and all models are equally likely a priori, log(prior k)= p
-  log(1/2). Then the BIC can be easily recovered
+  - 2 L_k + p_k log(n) + 2 log(p choose p_k)
 
-  BIC_k= -2 * [postProb + p log(2)]
+  and a general information criterion with a given model size penalty
 
-  When using priorCoef=bicprior() and priorDelta=modelbbprior(),
-  log(prior k)= - log(p+1) - log(p choose p_k), hence
+  - 2 L_k + p_k penalty
 
-  EBIC_k= -2 * [postProb + log(p+1)].
+
+  The MCMC model search is based on assigning a probability to each
+  model, and then using MCMC to sample models from this
+  distribution. The probability of model k is
+
+  exp(- IC_k / 2) / sum_l exp(- IC_l / 2)
+
+  where IC_k is the value of the information criterion (BIC, EBIC...)
+
+  Hence the model with best (lowest) IC_k has highest probability, which
+  means that it is likely to be sampled by the MCMC algorithm.
  
 }
 \author{
@@ -65,15 +79,16 @@ x <- matrix(rnorm(100*3),nrow=100,ncol=3)
 theta <- matrix(c(1,1,0),ncol=1)
 y <- x \%*\% theta + rnorm(100)
 ybin <- y>0
+df <- data.frame(y, ybin, x)
 
 #BIC for all models (the intercept is also selected in/out)
-fit= bestBIC(y ~ x[,1] + x[,2])
+fit= bestBIC(y ~ X1 + X2, data=df)
 fit
 
 #Same, but setting the BIC's log(n) penalty manually
 #change the penalty for other General Info Criteria
 #n= nrow(x)
-#fit= bestIC(y ~ x[,1] + x[,2], penalty=log(n))
+#fit= bestIC(y ~ X1 + X2, data=df, penalty=log(n))
 
 summary(fit) #usual GLM summary
 
@@ -81,6 +96,10 @@ coef(fit) #MLE under top model
 
 #confint(fit) #conf int under top model (requires MASS package)
 
+
+#Binary outcome
+fit2= bestBIC(ybin ~ X1 + X2, data=df, family='binomial')
+fit2
 
 
 }

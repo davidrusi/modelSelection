@@ -1,14 +1,14 @@
-context("Test nlpMarginal without groups")
-library("mombf")
+context("Test marginalLikelihood without groups")
+library("modelSelection")
 
 source(test_path("data-for-tests.R"))
 tolerance <- 1e-5
 
 patrick::with_parameters_test_that(
-  "nlpMarginal is correctly impemented for normal family and", {
+  "marginalLikelihood is correctly impemented for normal family and", {
     pVar <- igprior(alpha=0.01, lambda=0.01)
-    ans_max <- nlpMarginal(theta3_truth_idx, y3, X3, priorCoef=pCoef, priorVar=pVar)
-    ans_all <- nlpMarginal(
+    ans_max <- marginalLikelihood(theta3_truth_idx, y3, X3, priorCoef=pCoef, priorVar=pVar)
+    ans_all <- marginalLikelihood(
       seq_along(theta3_truth), y3, X3, priorCoef=pCoef, priorVar=pVar
     )
     expect_true(ans_max > ans_all)
@@ -25,13 +25,13 @@ patrick::with_parameters_test_that(
 )
 
 patrick::with_parameters_test_that(
-  "nlpMarginal is correctly impemented for twopiecenormal family and", {
+  "marginalLikelihood is correctly impemented for twopiecenormal family and", {
     pVar <- igprior(alpha=0.01, lambda=0.01)
-    ans_max <- nlpMarginal(
+    ans_max <- marginalLikelihood(
       theta3_truth_idx, y3, X3, family="twopiecenormal", priorCoef=pCoef,
       priorVar=pVar, priorSkew=pSkew
     )
-    ans_all <- nlpMarginal(
+    ans_all <- marginalLikelihood(
       seq_along(theta3_truth), y3, X3, family="twopiecenormal", priorCoef=pCoef,
       priorVar=pVar, priorSkew=pSkew
     )
@@ -47,12 +47,12 @@ patrick::with_parameters_test_that(
 )
 
 patrick::with_parameters_test_that(
-  "nlpMarginal is correctly impemented for laplace family and",{
+  "marginalLikelihood is correctly impemented for laplace family and",{
     pVar <- igprior(alpha=0.01, lambda=0.01)
-    ans_max <- nlpMarginal(
+    ans_max <- marginalLikelihood(
       theta3_truth_idx, y3, X3, family="laplace", priorCoef=pCoef, priorVar=pVar
     )
-    ans_all <- nlpMarginal(
+    ans_all <- marginalLikelihood(
       seq_along(theta3_truth), y3, X3, family="laplace", priorCoef=pCoef, priorVar=pVar
     )
     expect_true(ans_max > ans_all)
@@ -67,13 +67,13 @@ patrick::with_parameters_test_that(
 )
 
 patrick::with_parameters_test_that(
-  "nlpMarginal is correctly impemented for twopiecelaplace family and", {
+  "marginalLikelihood is correctly impemented for twopiecelaplace family and", {
     pVar <- igprior(alpha=0.01, lambda=0.01)
-    ans_max <- nlpMarginal(
+    ans_max <- marginalLikelihood(
       theta3_truth_idx, y3, X3, family="twopiecelaplace", priorCoef=pCoef,
       priorVar=pVar, priorSkew=pSkew
     )
-    ans_all <- nlpMarginal(
+    ans_all <- marginalLikelihood(
       seq_along(theta3_truth), y3, X3, family="twopiecelaplace", priorCoef=pCoef,
       priorVar=pVar, priorSkew=pSkew
     )
@@ -92,10 +92,10 @@ test_that(
   "logical or integer sel give equal results", {
     pVar <- igprior(alpha=0.01, lambda=0.01)
     pCoef=momprior(tau=0.328, r=1)
-    ans_int <- nlpMarginal(
+    ans_int <- marginalLikelihood(
       theta3_truth_idx, y3, X3, family="normal", priorCoef=pCoef, priorVar=pVar
     )
-    ans_bool <- nlpMarginal(
+    ans_bool <- marginalLikelihood(
       theta3_truth_bool, y3, X3, family="normal", priorCoef=pCoef, priorVar=pVar
     )
     expect_equal(ans_int, ans_bool)

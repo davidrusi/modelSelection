@@ -81,7 +81,7 @@ modelsearchBlockDiag <- function(y, x, priorCoef=momprior(tau=0.348), priorDelta
     ms <- modelSelection(y=y,x=xsel,center=FALSE,scale=FALSE,enumerate=TRUE,maxvars=min(c(ncol(xsel),10)),priorCoef=priorCoef,priorDelta=modelunifprior(),priorVar=priorVar,verbose=FALSE)
     nvarsenum <- sapply(strsplit(as.character(ms$models$modelid),split=','),length)
     modelid <- lapply(strsplit(as.character(ms$models$modelid),split=','), function(i) sel[as.numeric(i)])
-    ct <- nlpMarginal(sel=integer(0),family='normal',priorCoef=priorCoef,priorVar=priorVar,y=y,x=x,logscale=TRUE) - log(ms$models[ms$models$modelid=='','pp'])
+    ct <- marginalLikelihood(sel=integer(0),family='normal',priorCoef=priorCoef,priorVar=priorVar,y=y,x=x,logscale=TRUE) - log(ms$models[ms$models$modelid=='','pp'])
     ansenum <- data.frame(nvars=sapply(modelid,length), modelid=sapply(modelid,paste,collapse=','), logpp=log(ms$models$pp) + priorModel(nvarsenum) + ct)
     ans <- unique(rbind(ans[,c('nvars','modelid','logpp')],ansenum[!(ansenum$modelid %in% ans$modelid),]))
     return(ans[order(ans$logpp,decreasing=TRUE),])
@@ -122,7 +122,7 @@ blocksearch <- function(y,e=y,x,selfixed=integer(0),blocksize,maxvars,priorCoef,
         sel <- c(selfixed,notfixed[as.numeric(modelid[[i]])])
         sel <- sel[order(sel)]
         modelnames[i] <- paste(sel,collapse=',')
-        marglhood[i] <- nlpMarginal(sel=sel,family='normal',priorCoef=priorCoef,priorVar=priorVar,y=y,x=x,logscale=TRUE)
+        marglhood[i] <- marginalLikelihood(sel=sel,family='normal',priorCoef=priorCoef,priorVar=priorVar,y=y,x=x,logscale=TRUE)
         pp[i] <- priorp[i] + marglhood[i]
         if (pp[i] > bestpp) { bestpp <- pp[i] }
         if (marglhood[i] > bestmarg) { bestmarg <- marglhood[i] } else if (marglhood[i] + maxlogmargdrop < bestmarg) { stopearly <- TRUE }

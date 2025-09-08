@@ -36,7 +36,6 @@ export(modelSelection, modelSelection_eBayes, modelSelectionGGM, cil)
 export(localnulltest, localnulltest_fda, localnulltest_givenknots, localnulltest_fda_givenknots)
 export(bestAIC, bestBIC, bestEBIC, bestIC)
 export(bfnormmix)
-export(getAIC, getBIC, getEBIC, getIC)
 
 
 # Methods for output of main model selection functions

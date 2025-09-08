@@ -23,7 +23,6 @@ Density of a Dirichlet(q) distribution evaluated at each row of \code{x}
 }
 \author{ David Rossell }
 \examples{
-library(mombf)
 x= matrix(c(1/3,2/3,.5,.5),nrow=2,byrow=TRUE)
 ddir(x,q=2)
 }

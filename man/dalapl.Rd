@@ -41,7 +41,6 @@ ralapl(n, th=0, scale=1, alpha=0)
 }
 \author{ David Rossell }
 \examples{
-library(mombf)
 e <- ralapl(n=10^4, th=1, scale=2, alpha=0.5)
 thseq <- seq(min(e),max(e),length=1000)
 hist(e, main='', breaks=30, prob=TRUE)

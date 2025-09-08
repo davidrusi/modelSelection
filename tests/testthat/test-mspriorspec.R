@@ -1,5 +1,5 @@
 context("Test msPriorSpec initializers")
-library("mombf")
+library("modelSelection")
 
 source(test_path("data-for-tests.R"))
 

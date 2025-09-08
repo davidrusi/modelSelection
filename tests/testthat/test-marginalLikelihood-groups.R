@@ -1,5 +1,5 @@
-context("Test nlpMarginal with groups")
-library("mombf")
+context("Test marginalLikelihood with groups")
+library("modelSelection")
 
 source(test_path("data-for-tests.R"))
 tolerance <- 1e-6
@@ -18,28 +18,29 @@ patrick::with_parameters_test_that(
 )
 
 test_that(
-  "nlpMarginal ignores sel argument when its a formula", {
+  "marginalLikelihood ignores sel argument when its a formula", {
     pCoef <- momprior(tau=0.348)
-    ans1 <- nlpMarginal(seq(4), y3, X3, priorCoef=pCoef)
-    formula <- y3~X3[,2]+X3[,3]+X3[,4]
-    expect_warning(ans2 <- nlpMarginal(c(1,2), y=formula, priorCoef=pCoef), "ignoring sel")
+    ans1 <- marginalLikelihood(seq(4), y3, X3, priorCoef=pCoef)
+    formula <- y3 ~ .
+    df <- data.frame(y3, X3[,2:4])
+    expect_warning(ans2 <- marginalLikelihood(c(1,2), y=formula, data=df, priorCoef=pCoef), "ignoring sel")
     expect_equal(ans1, ans2)
-    expect_warning(ans3 <- nlpMarginal(y=formula, priorCoef=pCoef), NA)
+    expect_warning(ans3 <- marginalLikelihood(y=formula, data=df, priorCoef=pCoef), NA)
     expect_equal(ans1, ans3)
   }
 )
 
 patrick::with_parameters_test_that(
-  "nlpMarginal with same kind of priorCoef and Group is correctly impemented for normal family:", {
+  "marginalLikelihood with same kind of priorCoef and Group is correctly impemented for normal family:", {
     pVar <- igprior(alpha=0.01, lambda=0.01)
-    ans_max <- nlpMarginal(theta9_truth_idx, y9, X9, family="normal", priorCoef=pCoef, priorVar=pVar)
-    ans_max_group <- nlpMarginal(
+    ans_max <- marginalLikelihood(theta9_truth_idx, y9, X9, family="normal", priorCoef=pCoef, priorVar=pVar)
+    ans_max_group <- marginalLikelihood(
       theta9_truth_idx, y9, X9, groups=groups9, family="normal",
       priorCoef=pCoef, priorGroup=pCoef, priorVar=pVar
     )
 
-    ans_all <- nlpMarginal(seq_along(theta9_truth), y9, X9, family="normal",priorCoef=pCoef, priorVar=pVar)
-    ans_all_group <- nlpMarginal(
+    ans_all <- marginalLikelihood(seq_along(theta9_truth), y9, X9, family="normal",priorCoef=pCoef, priorVar=pVar)
+    ans_all_group <- marginalLikelihood(
       seq_along(theta9_truth), y9, X9, groups=groups9, family="normal",
       priorCoef=pCoef, priorGroup=pCoef, priorVar=pVar
     )
@@ -52,14 +53,14 @@ patrick::with_parameters_test_that(
 )
 
 patrick::with_parameters_test_that(
-  "nlpMarginal with groups is correctly impemented for normal family:", {
+  "marginalLikelihood with groups is correctly impemented for normal family:", {
     pVar <- igprior(alpha=0.01, lambda=0.01)
-    ans_max <- nlpMarginal(
+    ans_max <- marginalLikelihood(
       theta9_truth_idx, y9, X9, groups=groups9, family="normal",
       priorCoef=pCoef, priorGroup=pGroup, priorVar=pVar
     )
 
-    ans_all <- nlpMarginal(
+    ans_all <- marginalLikelihood(
       seq_along(theta9_truth), y9, X9, groups=groups9, family="normal",
       priorCoef=pCoef, priorGroup=pGroup, priorVar=pVar
     )
@@ -70,8 +71,8 @@ patrick::with_parameters_test_that(
     normalid=list(pCoef=normalidprior(tau=0.3), pGroup=normalidprior(tau=0.4), expected_max=-231.111757, expected_all=-236.971966),
     normid_gzell=list(pCoef=normalidprior(tau=1), pGroup=groupzellnerprior(tau=0.4), expected_max=-316.658333, expected_all=-320.087106),
     zell_gzell=list(pCoef=zellnerprior(tau=0.3), pGroup=groupzellnerprior(tau=0.4), expected_max=-342.339794, expected_all=-342.19151),
-    mom_gzell=list(pCoef=momprior(tau=0.3), pGroup=groupzellnerprior(tau=10), expected_max=-260.0427, expected_all=-269.2886), #from mombf 4.0.0
-#    mom_gzell=list(pCoef=momprior(tau=0.3), pGroup=groupzellnerprior(tau=10), expected_max=-262.450681, expected_all=-274.104395), #before mombf 4.0.0
+    mom_gzell=list(pCoef=momprior(tau=0.3), pGroup=groupzellnerprior(tau=10), expected_max=-260.0427, expected_all=-269.2886), #from modelSelection
+    #    mom_gzell=list(pCoef=momprior(tau=0.3), pGroup=groupzellnerprior(tau=10), expected_max=-262.450681, expected_all=-274.104395), #before mombf 4.0.0
     mom_gmom=list(pCoef=momprior(tau=0.3), pGroup=groupmomprior(tau=0.4), expected_max=-238.026357, expected_all=-252.308801)
   )
 )

@@ -1262,7 +1262,7 @@ void modelSelectionEnum(int *postMode, double *postModeProb, double *postProb, i
 
   sel= new arma::SpMat<short>(nbvars, 1);
   selold= new arma::SpMat<short>(nbvars, 1);
-  if (*verbose ==1) Rprintf(" Computing posterior probabilities\n");
+  if (*verbose ==1) Rprintf(" Summarizing the output\n");
   if (*nmodels >10) { niter10= (*nmodels)/10; } else { niter10= 1; }
 
   postModeidx= 0;

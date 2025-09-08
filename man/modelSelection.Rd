@@ -308,6 +308,7 @@ Object of class \code{msfit}, which extends a list with elements
 x <- matrix(rnorm(100*3),nrow=100,ncol=3)
 theta <- matrix(c(1,1,0),ncol=1)
 y <- x \%*\% theta + rnorm(100)
+df <- data.frame(y, x)
 
 #Specify prior parameters
 priorCoef <- momprior()
@@ -320,13 +321,13 @@ priorDelta <- modelbinomprior(p=0.5)
 priorDelta <- modelbbprior()
 
 #Model selection
-fit1 <- modelSelection(y=y, x=x, center=FALSE, scale=FALSE,
+fit1 <- modelSelection(y ~ ., data=df, 
 priorCoef=priorCoef, priorDelta=priorDelta)
-postProb(fit1) #posterior model probabilities
-
-fit1$margpp #posterior marginal inclusion prob
 
 coef(fit1) #BMA estimates, 95% intervals, marginal post prob
+
+postProb(fit1) #posterior model probabilities
+
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

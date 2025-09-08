@@ -26,7 +26,7 @@
 
 # ##############################################################################
 # # Dependencies
-# library(mombf)
+# library(modelSelection)
 # library(pracma)
 # library(glmnet)
 # library(hdm)
@@ -491,12 +491,12 @@ model.pprobs.cil <- function(y, D, X, I = NULL, family = 'normal', familyD = 'no
   includevars = includevars, verbose = TRUE) {
 ################################################################################
 
-  # Renaming (DEPENDENCIES: mombf, pracma, glmnet, hdm)
-  ms <- modelSelection#mombf::modelSelection
-  igp <- igprior(0.01, 0.01)#mombf::igprior(0.01, 0.01)
-  bbp <- modelbbprior(1, 1)#mombf::modelbbprior(1, 1)
-  ufp <- modelunifprior()#mombf::modelunifprior()
-  mlik <- nlpMarginal#mombf::nlpMarginal
+  # Renaming (DEPENDENCIES: modelSelection, pracma, glmnet, hdm)
+  ms <- modelSelection       #modelSelection::modelSelection
+  igp <- igprior(0.01, 0.01) #modelSelection::igprior(0.01, 0.01)
+  bbp <- modelbbprior(1, 1)  #modelSelection::modelbbprior(1, 1)
+  ufp <- modelunifprior()    #modelSelection::modelunifprior()
+  mlik <- marginalLikelihood #modelSelection::marginalLikelihood
 
   # These parameters must be integers 
   max.mod <- round(max.mod, 0)
@@ -571,7 +571,7 @@ model.pprobs.cil <- function(y, D, X, I = NULL, family = 'normal', familyD = 'no
 
   # Marginal inclusion probabilities
   pj1 <- bvs.fit0[['margpp']]
-  pj1[which(is.nan(pj1))] <- 0  # Potential problems in mombf with undefined
+  pj1[which(is.nan(pj1))] <- 0  # Potential problems in modelSelection with undefined
   pj1[which(pj1 == 1 & !includevars)] <- 1 - eps  # In case there are extreme values
   pj1[which(pj1 == 0)] <- eps
 
@@ -615,7 +615,7 @@ model.pprobs.cil <- function(y, D, X, I = NULL, family = 'normal', familyD = 'no
     auxprpr <- c(rep(1/2, ncol(betad)), auxprpr)
     auxprpr[which(auxprpr == 1)] <- 1 - eps
     auxprpr[which(auxprpr == 0)] <- eps
-    auxmp <- modelbinomprior(p = auxprpr)#mombf::modelbinomprior(p = auxprpr)
+    auxmp <- modelbinomprior(p = auxprpr)#modelSelection::modelbinomprior(p = auxprpr)
 
     if (is.data.frame(Z)) {
       update.fit <- ms(f, data=data, priorCoef=priorCoef, priorVar=igp, priorDelta=auxmp, niter=round(R/2), verbose=verbose, center=center, scale=scale, includevars=includevars)
@@ -671,7 +671,7 @@ model.pprobs.cil <- function(y, D, X, I = NULL, family = 'normal', familyD = 'no
   #pg1cth[which(pg1cth == 1 & !includevars)] <- 1 - eps
 
   # Bernoulli model prior with unequal probabilities
-  nbp <- modelbinomprior(p = pg1cth)#mombf::modelbinomprior(p = pg1cth)
+  nbp <- modelbinomprior(p = pg1cth)#modelSelection::modelbinomprior(p = pg1cth)
  
   # New model search
   #new.fit <- ms(y, Z, priorCoef = priorCoef, priorVar = igp, priorDelta = nbp, niter = R, verbose = verbose, center = center, scale = scale, includevars = includevars)
@@ -687,7 +687,7 @@ model.pprobs.cil <- function(y, D, X, I = NULL, family = 'normal', familyD = 'no
   # BMA inference and Posterior model probabilities
   beta <- coef(new.fit)
   teff <- beta[treatidx,]
-  pprobs <- postProb(new.fit)#mombf::postProb(new.fit)[, c(1, 3)]
+  pprobs <- postProb(new.fit)#modelSelection::postProb(new.fit)[, c(1, 3)]
   mpprobs <- new.fit[['margpp']]
 
   # Finish

@@ -1,4 +1,4 @@
 library(testthat)
-library(mombf)
+library(modelSelection)
 
-test_check("mombf")
+test_check("modelSelection")

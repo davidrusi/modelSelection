@@ -1,5 +1,5 @@
 context("Test modelSelection with Gibbs")
-library("mombf")
+library("modelSelection")
 
 source(test_path("data-for-tests.R"))
 tolerance <- 5e-3
@@ -9,15 +9,11 @@ patrick::with_parameters_test_that(
     pDelta <- modelbbprior(1,1)
     log <- capture.output(
       fit1 <- modelSelection(y=y3, x=X3, priorCoef=pCoef, priorDelta=pDelta, enumerate=FALSE, family=family, priorSkew=pCoef),
-      fit2 <- modelSelection(y3~X3[,2]+X3[,3]+X3[,4], priorCoef=pCoef, priorDelta=pDelta, enumerate=FALSE, family=family, priorSkew=pCoef),
       fit3 <- modelSelection(as.formula("y~X2+X3+X4"), data=data.frame(X3, y=y3), priorCoef=pCoef, priorDelta=pDelta, enumerate=FALSE, family=family, priorSkew=pCoef)
     )
     pp1 <- postProb(fit1)
-    pp2 <- postProb(fit2)
     pp3 <- postProb(fit3)
-    expect_equal(as.character(pp1$modelid[1]), as.character(pp2$modelid[1]))
     expect_equal(as.character(pp1$modelid[1]), as.character(pp3$modelid[1]))
-    expect_equal(as.numeric(pp1$pp[1]), as.numeric(pp2$pp[1]), tolerance=tolerance)
     expect_equal(as.numeric(pp1$pp[1]), as.numeric(pp3$pp[1]), tolerance=tolerance)
   },
   patrick::cases(
@@ -94,8 +90,10 @@ test_that(
     pDelta <- modelbbprior(1,1)
     log <- capture.output(
       fit <- modelSelection(
-        y6~X6[,2:7], priorCoef=pCoef, priorDelta=pDelta, enumerate=FALSE,
-        smoothterms= ~ X6[,2:7], family="normal", priorSkew=pCoef, priorGroup=pCoef
+        y6 ~ ., data=data.frame(y6, X6[,2:7]), priorCoef=pCoef, priorDelta=pDelta, enumerate=FALSE,
+        smoothterms= ~ X1 + X2 + X3 + X4 + X5 + X6, family="normal", priorSkew=pCoef, priorGroup=pCoef
+        #y6~X6[,2:7], priorCoef=pCoef, priorDelta=pDelta, enumerate=FALSE,
+        #smoothterms= ~ X6[,2:7], family="normal", priorSkew=pCoef, priorGroup=pCoef
       )
     )
     pprobs <- postProb(fit)

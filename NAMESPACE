@@ -1,0 +1,86 @@
+###
+### NAMESPACE
+###
+
+import(methods, mgcv, stats)
+importFrom(mclust, mclustBIC)
+importFrom("utils", "combn")
+importFrom(Rcpp, evalCpp)
+ 
+importFrom("graphics", "abline", "lines", "legend")
+importFrom("grDevices", "devAskNewPage")
+
+useDynLib(modelSelection, .registration=TRUE)
+
+
+# Prior distributions on models
+
+export(modelbbprior, modelbinomprior, modelcomplexprior, modelunifprior)
+export(bbPrior, binomPrior, unifPrior)
+
+export(aic, bic, ic)
+
+
+# Prior distributions on parameters
+
+export(momprior, groupmomprior, emomprior, groupemomprior, imomprior, groupimomprior) # Non-local priors
+export(normalidprior, zellnerprior, groupzellnerprior, icarplusprior) #Local priors
+export(igprior, exponentialprior)  #Priors on dispersion parameters
+
+export(eprod)
+
+
+# Main model selection functions
+
+export(modelSelection, modelSelection_eBayes, modelSelectionGGM, cil)
+export(localnulltest, localnulltest_fda, localnulltest_givenknots, localnulltest_fda_givenknots)
+export(bestAIC, bestBIC, bestEBIC, bestIC)
+export(bfnormmix)
+export(getAIC, getBIC, getEBIC, getIC)
+
+
+# Methods for output of main model selection functions
+
+S3method(coef,icfit)
+S3method(coef,mixturebf)
+S3method(coef,msfit)
+S3method(coef,msfit_ggm)
+S3method(coef,cilfit)
+S3method(coef,localtest)
+export(coefByModel)
+
+S3method(confint, icfit)
+
+export(icov)
+
+export(plotprior)
+S3method(plot,msfit)
+S3method(plot,msfit_ggm)
+
+export(postProb, postSamples)
+
+S3method(predict, icfit)
+S3method(predict, msfit)
+S3method(predict, localtest)
+
+S3method(summary, icfit)
+
+
+# Calculation of marginal (or integrated) likelihoods
+
+export(marginalLikelihood)
+export(marginalNIW)
+
+
+# Densities, quantiles, and random number generation
+
+export(dalapl, ddir, demom, dimom, dmom, dmomigmarg, demomigmarg, diwish,dpostNIW)
+export(palapl, pemom, pemomigmarg, pimom, pmom, pmomigmarg)
+export(qimom, qmom)
+export(ralapl, rnlp, rpostNIW)
+
+export(priorp2g)
+
+
+
+

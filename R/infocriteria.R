@@ -1,10 +1,10 @@
 ### Methods for icfit objects
 
 setMethod("show", signature(object='icfit'), function(object) {
-  cat("icfit object\n\n")
-  cat("Model with best",object$criterion,":",object$topmodel,"\n\n")
-  cat("Use summary(), coef() and predict() to get inference for the top model\n")
-  cat("Use coef(object$msfit) and predict(object$msfit) to get BMA estimates and predictions\n")
+  message("icfit object\n\n")
+  message("Model with best ",object$criterion,": ",object$topmodel,"\n\n")
+  message("Use summary(), coef() and predict() to get inference for the top model\n")
+  message("Use coef(object$msfit) and predict(object$msfit) to get BMA estimates and predictions\n")
 }
 )
 

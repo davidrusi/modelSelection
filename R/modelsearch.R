@@ -64,9 +64,9 @@ modelsearchBlockDiag <- function(y, x, priorCoef=momprior(tau=0.348), priorDelta
             e <- y - predict(lm(y ~ x[,selfixed]))
         }
         if (verbose) {
-            cat("Iteration",iter,"\n")
-            cat("  Posterior mode",ans[sel.maxlogpp,'modelid'],ans[sel.maxlogpp,'logpp'],"\n")
-            cat("  Mode marg likelihood",ans[sel.bestmarg,'modelid'],ans[sel.bestmarg,'marglhood'],"\n")
+            message("Iteration ",iter,"\n")
+            message("  Posterior mode ",ans[sel.maxlogpp,'modelid'],ans[sel.maxlogpp,'logpp'],"\n")
+            message("  Mode marg likelihood ",ans[sel.bestmarg,'modelid'],ans[sel.bestmarg,'marglhood'],"\n")
         }
         iter <- iter+1
     }

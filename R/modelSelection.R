@@ -17,11 +17,11 @@ plot.msfit= function(x, y, ...) {
 
 
 setMethod("show", signature(object='msfit'), function(object) {
-  cat('msfit object with outcome of type',object$outcometype,',',object$p,'covariates and',object$family,'error distribution\n')
-  ifelse(any(object$postMode!=0), paste('  Posterior mode: covariate',which(object$postMode==1)), '  Posterior mode: null model')
-  cat("Use postProb() to get posterior model probabilities\n")
-  cat("Use coef() or predict() to get BMA estimates and intervals for parameters or given covariate values\n")
-  cat("Elements $margpp, $postMode, $postSample and $coef contain further information (see help('msfit') and help('modelSelection') for details)\n")
+  message('msfit object with outcome of type ',object$outcometype,', ',object$p,' covariates and ',object$family,' error distribution\n')
+  ifelse(any(object$postMode!=0), paste('  Posterior mode: covariate ',which(object$postMode==1)), '  Posterior mode: null model')
+  message("Use postProb() to get posterior model probabilities\n")
+  message("Use coef() or predict() to get BMA estimates and intervals for parameters or given covariate values\n")
+  message("Elements $margpp, $postMode, $postSample and $coef contain further information (see help('msfit') and help('modelSelection') for details)\n")
 }
 )
 
@@ -60,9 +60,9 @@ hasPostSampling <- function(object) {
   found= outcomefam %in% apply(hassamples[,1:2],1,paste,collapse=',')
   exactsampling= outcomefamprior  %in% avail_outcomefamprior
   if (!found) {
-    cat("Inference on parameters currently only available for the following settings: \n\n")
+    message("Inference on parameters currently only available for the following settings: \n\n")
     print(hassamples)
-    cat("\n")
+    message("\n")
     stop("Inference on parameters not implemented for outcometype= ",outcometype,", family=",family,", priorCoef=",priorCoef,", priorGroup=",priorGroup)
   } else {
     if (!exactsampling) warning("Exact posterior sampling not implemented, using Normal approx instead")
@@ -399,15 +399,15 @@ setMethod("marglhood_acrossmodels", signature(object='msfit'), function(object, 
 
 defaultmom= function(outcometype, family, verbose=TRUE) {
     if (outcometype=='Continuous') {
-        if (verbose) cat("Using default prior for continuous outcomes priorCoef=momprior(tau=0.348), priorVar=igprior(.01,.01)\n")
+        if (verbose) message("Using default prior for continuous outcomes priorCoef=momprior(tau=0.348), priorVar=igprior(.01,.01)\n")
         priorCoef= momprior(tau=0.348)
         priorVar= igprior(alpha=.01,lambda=.01)
     } else if (outcometype=='Survival') {
-        if (verbose) cat("Using default prior for Normal AFT survival outcomes priorCoef=momprior(tau=0.192), priorVar=igprior(3,3)\n")
+        if (verbose) message("Using default prior for Normal AFT survival outcomes priorCoef=momprior(tau=0.192), priorVar=igprior(3,3)\n")
         priorCoef= momprior(tau=0.192)
         priorVar= igprior(alpha=3,lambda=3)
     } else if (outcometype=='glm') {
-        if (verbose) cat("Using default prior for GLMs priorCoef=momprior(tau=1/3), priorVar=igprior(.01,.01)\n")
+        if (verbose) message("Using default prior for GLMs priorCoef=momprior(tau=1/3), priorVar=igprior(.01,.01)\n")
         priorCoef= momprior(tau=1/3)
         priorVar= igprior(alpha=.01,lambda=.01)
     } else {
@@ -578,13 +578,13 @@ modelSelection <- function(y, x, data, smoothterms, nknots=9, groups=1:ncol(x), 
       postMode[includevars==1] <- TRUE
       ndeltaini <- as.integer(sum(postMode)); deltaini <- as.integer(which(as.logical(postMode))-1)
     } else if (initSearch=='SCAD') {
-      if (verbose) cat("Initializing via SCAD cross-validation...")
+      if (verbose) message("Initializing via SCAD cross-validation...")
       deltaini <- rep(TRUE,ncol(xstd))
       cvscad <- ncvreg::cv.ncvreg(X=xstd[,!ct],y=ystd-mean(ystd),family="gaussian",penalty="SCAD",nfolds=10,dfmax=1000,max.iter=10^4)
       deltaini[!ct] <- ncvreg::ncvreg(X=xstd[,!ct],y=ystd-mean(ystd),penalty='SCAD',dfmax=1000,lambda=rep(cvscad$lambda[cvscad$cv],2))$beta[-1,1]!=0
       deltaini[includevars==1] <- TRUE
       ndeltaini <- as.integer(sum(deltaini)); deltaini <- as.integer(which(deltaini)-1)
-      if (verbose) cat(" Done\n")
+      if (verbose) message(" Done\n")
     }
 
     #Run MCMC
@@ -598,7 +598,7 @@ modelSelection <- function(y, x, data, smoothterms, nknots=9, groups=1:ncol(x), 
   } else {
 
     #Model enumeration
-    if (verbose) cat("Enumerating models...\n")
+    if (verbose) message("Enumerating models...\n")
     nincludevars= sum(includevars)
     nvars= ifelse(familyint==0,ncol(xstd)+2-nincludevars,ncol(xstd)-nincludevars)
     if (familyint==0) { includeenum= c(includevars[groups+1],FALSE,FALSE) } else { includeenum= includevars[groups+1] }
@@ -687,7 +687,7 @@ formatInputdata <- function(y, x, data, smoothterms, nknots, family) {
       x= des$x; groups= des$groups; constraints= des$constraints; typeofvar= des$typeofvar
       if ('Surv' %in% class(des$y)) {
           if (all(des$y[,1] >0)) {
-              cat("Response type is survival and all its values are >0. Remember that you should log-transform the response prior to running modelSelection\n")
+              message("Response type is survival and all its values are >0. Remember that you should log-transform the response prior to running modelSelection\n")
           }
           outcometype= 'Survival'; uncens= as.integer(des$y[,2]); y= des$y[,1]
           ordery= c(which(uncens==1),which(uncens!=1)); y= y[ordery]; x= x[ordery,,drop=FALSE]; uncens= uncens[ordery]
@@ -1360,7 +1360,7 @@ greedymodelSelectionR <- function(y, x, niter=100, marginalFunction, priorFuncti
     for (i in 1:ncol(x)) {
       selnew <- sel; selnew[i] <- !selnew[i]
       mnew <- marginalFunction(y=y,x=x[,selnew,drop=FALSE],logscale=TRUE,...) + priorFunction(selnew,logscale=TRUE)
-      if (mnew>mcur) { sel[i]=selnew[i]; mcur=mnew; nchanges=nchanges+1; if (verbose) cat(paste(ifelse(sel[i],"Added","Dropped"),nn[i],"\n",collapse=" ")) }
+      if (mnew>mcur) { sel[i]=selnew[i]; mcur=mnew; nchanges=nchanges+1; if (verbose) message(paste(ifelse(sel[i],"Added","Dropped"),nn[i],"\n",collapse=" ")) }
     }
   }
   return(sel)
@@ -1390,7 +1390,7 @@ modelselBIC <- function(y, x, xadj, family, niter=1000, burnin= round(.1*niter),
     return(ans)
   }
   #Greedy iterations
-  if (verbose) cat("Initializing...")
+  if (verbose) message("Initializing...")
   sel <- rep(FALSE,ncol(x))
   mcur <- pluginJoint(sel)$marginal
   nchanges <- 1; it <- 1
@@ -1402,7 +1402,7 @@ modelselBIC <- function(y, x, xadj, family, niter=1000, burnin= round(.1*niter),
       if (mnew>mcur) { sel[i] <- selnew[i]; mcur <- mnew; nchanges <- nchanges+1 }
     }
   }
-  if (verbose) { cat(" Done\nGibbs sampling") }
+  if (verbose) { message(" Done\nGibbs sampling") }
   #Gibbs iterations
   niter10 <- ceiling(niter/10)
   postModel <- matrix(NA,nrow=niter,ncol=ncol(x))
@@ -1418,9 +1418,9 @@ modelselBIC <- function(y, x, xadj, family, niter=1000, burnin= round(.1*niter),
     }
     postModel[j,] <- sel
     postCoef1[j,sel] <- curmod$coef1; postCoef2[j,] <- curmod$coef2
-    if (verbose & ((j%%niter10)==0)) cat(".")
+    if (verbose & ((j%%niter10)==0)) message(".")
   }
-  if (verbose) cat("Done\n")
+  if (verbose) message("Done\n")
   #Return output
   if (burnin>0) { postModel <- postModel[-1:-burnin,,drop=FALSE]; postCoef1 <- postCoef1[-1:-burnin,,drop=FALSE]; postCoef2 <- postCoef2[-1:-burnin,,drop=FALSE] }
   ans <- list(postModel=postModel, postCoef1=postCoef1, postCoef2=postCoef2, margpp=colMeans(postModel))

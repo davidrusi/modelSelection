@@ -812,7 +812,6 @@ momPolyCoef <- function(z, shrinkage, g) {
         }
     }
     ans[nvars+1]= sum(exp(sapply(1:nrow(h), function(i) { nvars * (log(matrix(h[i,],nrow=1) %*% R %*% matrix(h[i,],ncol=1)) - log(2)) }) -lfactorial(r) - nvars*log(1+g)) * unitv)
-    #cat('.')
     return(rev(ans))
 }
 

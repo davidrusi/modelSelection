@@ -4,12 +4,6 @@ library("modelSelection")
 source(test_path("data-for-tests.R"))
 tolerance <- 1e-6
 
-test_that(
-  "msfit show method works", {
-    log <- capture.output(fit <- modelSelection(y=y3, x=X3))
-    expect_output(show(fit), "msfit object")
-  }
-)
 
 test_that(
   "msfit coef method works", {

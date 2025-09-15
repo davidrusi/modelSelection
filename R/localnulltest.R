@@ -1,12 +1,11 @@
 ### Methods for localtest objects
 
 setMethod("show", signature(object='localtest'), function(object) {
-  cat("Estimated local covariate effects\n\n")
+  message("Estimated local covariate effects\n\n")
   print(object$covareffects[1:15,,drop=FALSE])
-  if (nrow(object$covareffects)>15) cat("...")
-  cat("\n\n")
-  cat("Use coef() to extract point estimates, intervals and posterior probabilities for local effects \n")
-  #cat("\n\n")
+  if (nrow(object$covareffects)>15) message("...")
+  message("\n\n")
+  message("Use coef() to extract point estimates, intervals and posterior probabilities for local effects \n")
 }
 )
 
@@ -234,7 +233,7 @@ localnulltest_givenknots= function(y, x, z, x.adjust, localgridsize, localgrid, 
     knots= kk$knots; regionbounds= kk$regionbounds; region=kk$region; regioncoord= kk$regioncoord; testov= kk$testov; testxregion= kk$testxregion; testIntervals= kk$testIntervals
     #Create design matrix & run Bayesian model selection
     desnew= estimationPoints(x=x, regioncoord=regioncoord, regionbounds=regionbounds, testov=testov) #Points at which local effects will be estimated
-    if (any(is.na(region)) | any(is.na(desnew$region))) warning(cat("Some testing regions had too few observations. Consider using less local knots\n"))
+    if (any(is.na(region)) | any(is.na(desnew$region))) warning("Some testing regions had too few observations. Consider using less local knots\n")
     des= createDesignLocaltest(x=rbind(x,desnew$x), z=rbind(z,desnew$z), y=y, region=c(region,desnew$region), regionbounds=regionbounds, basedegree=basedegree, cutdegree=cutdegree, knots=knots, usecutbasis=usecutbasis, useSigma=FALSE, rowids.fullrank=1:nrow(x))
     w= des$w[1:nrow(x),]; wnew= des$w[-1:-nrow(x),]; neighbours= des$neighbours
     if (!is.null(x.adjust)) {
@@ -269,10 +268,10 @@ localnulltest_givenknots= function(y, x, z, x.adjust, localgridsize, localgrid, 
         colnames(regionid)[sel]= nn
     }
     #Estimated effect at the center of each local test region
-    if (verbose) cat("Estimating local effects... ")
+    if (verbose) message("Estimating local effects... ")
     if (!is.null(x.adjust)) { m.adjust= colMeans(x.adjust) } else { m.adjust= NULL }
     est= estimateLocaleffect(ms, wnew, desnew, x.adjust=m.adjust)
-    if (verbose) cat("Done\n")
+    if (verbose) message("Done\n")
     #Return output
     pplocalgrid= data.frame(localtest=1:nrow(testIntervals), testIntervals, pplocaltest)
     ans= list(pplocalgrid=pplocalgrid, covareffects=est$covareffects, covareffects.mcmc=est$covareffects.mcmc, ms=list(ms), pp_localknots=1, logdetSinv=0, nlocalknots=nlocalknots, regionbounds=list(regionbounds), basedegree=basedegree, cutdegree=cutdegree, usecutbasis=usecutbasis, knots=knots, Sigma='identity')
@@ -307,7 +306,7 @@ localnulltest_fda_givenknots= function(y, x, z, x.adjust, function_id, Sigma='AR
     #Create design matrix & run Bayesian model selection
     xc= scale(x, center=TRUE, scale=FALSE)
     desnew= estimationPoints(x=xc, regioncoord=regioncoord, regionbounds=regionbounds, testov=testov) #Points at which local effects will be estimated
-    if (any(is.na(region)) | any(is.na(desnew$region))) warning(cat("Some testing regions had too few observations. Consider using less knots\n"))
+    if (any(is.na(region)) | any(is.na(desnew$region))) warning("Some testing regions had too few observations. Consider using less knots\n")
     des= createDesignLocaltest(x=xc, z=z, y=y, x.adjust=x.adjust, xnew=desnew$x, znew=desnew$z, function_id=function_id, region=region, regionnew=desnew$region, regionbounds=regionbounds, basedegree=basedegree, cutdegree=cutdegree, knots=knots, usecutbasis=usecutbasis, useSigma=TRUE, Sigma=Sigma)
     ytilde= des$ytilde; wtilde= des$wtilde; logdetSinv= des$logdetSinv; neighbours= des$neighbours
     wnew= des$wnew
@@ -343,10 +342,10 @@ localnulltest_fda_givenknots= function(y, x, z, x.adjust, function_id, Sigma='AR
         colnames(regionid)[sel]= nn
     }
     #Estimated effect at the center of each local test region
-    if (verbose) cat("Estimating local effects... ")
+    if (verbose) message("Estimating local effects... ")
     if (!is.null(x.adjust)) { m.adjust= colMeans(x.adjust) } else { m.adjust= NULL }
     est= estimateLocaleffect(ms, wnew, desnew, x.adjust=m.adjust)
-    if (verbose) cat("Done\n")
+    if (verbose) message("Done\n")
     #Return output
     pplocalgrid= data.frame(localtest=1:nrow(testIntervals), testIntervals, pplocaltest)
     ans= list(pplocalgrid=pplocalgrid, covareffects=est$covareffects, covareffects.mcmc=est$covareffects.mcmc, ms=list(ms), pp_localknots=1, logdetSinv=logdetSinv, nlocalknots=nlocalknots, regionbounds=list(regionbounds), basedegree=basedegree, cutdegree=cutdegree, usecutbasis=usecutbasis, knots=knots)

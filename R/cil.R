@@ -542,13 +542,13 @@ model.pprobs.cil <- function(y, D, X, I = NULL, family = 'normal', familyD = 'no
   includeX[isct] <- TRUE #always add the intercept (so it doesn't affect EB/EP estimates)
    
   # Estimate coefficients on exposure model
-  if (verbose) cat("ESTIMATING ASSOCIATION BETWEEN TREATMENTS AND CONTROLS\n\n")
+  if (verbose) message("ESTIMATING ASSOCIATION BETWEEN TREATMENTS AND CONTROLS\n\n")
   betad <- exposureCoef(Di=Di, A=A, familyD=familyD, typeofvar=typeofvar, addintcpt=addintcpt, mod1=mod1, priorCoef=priorCoef, Rinit=Rinit, lpen=lpen)
     
   # THETA SEARCH ###############################################################
   # Initial fit: th0 = 0; th1 = 0 (UNIFORM MODEL PRIOR)
   if (is.null(bvs.fit0)) {
-    if (verbose) cat("INITIAL FIT UNDER UNIFORM MODEL PRIOR \n\n")
+    if (verbose) message("INITIAL FIT UNDER UNIFORM MODEL PRIOR \n\n")
     if (is.data.frame(Z)) {
       f <- as.formula(paste('y ~', paste(names(Z), collapse=' + ')))
       data <- cbind(y, Z)
@@ -579,7 +579,7 @@ model.pprobs.cil <- function(y, D, X, I = NULL, family = 'normal', familyD = 'no
   max.mod <- min(max.mod, nrow(pprobs))
   G0 <- unname(sapply(as.character(pprobs[1:max.mod, 1]), binary.id, p = p, nt = ncol(Di), conc = TRUE)) # Prevent a dictionary too big
 
-  if (verbose) cat("\n ESTIMATING HYPER-PARAMETER VALUES \n\n")
+  if (verbose) message("\n ESTIMATING HYPER-PARAMETER VALUES \n\n")
   # Determine the values of hat{theta} #########################################
   # Set limits for optimisation (in principle: unbounded)
   lws <- rep(-Inf, ncol(D) + 1)
@@ -675,7 +675,7 @@ model.pprobs.cil <- function(y, D, X, I = NULL, family = 'normal', familyD = 'no
  
   # New model search
   #new.fit <- ms(y, Z, priorCoef = priorCoef, priorVar = igp, priorDelta = nbp, niter = R, verbose = verbose, center = center, scale = scale, includevars = includevars)
-  if (verbose) cat("\n FINAL FIT UNDER ESTIMATED ASYMMETRIC BERNOULLI PRIOR \n\n")
+  if (verbose) message("\n FINAL FIT UNDER ESTIMATED ASYMMETRIC BERNOULLI PRIOR \n\n")
   if (is.data.frame(Z)) {
     new.fit <- ms(f, data=data, priorCoef = priorCoef, priorVar = igp, priorDelta = nbp, niter = R, verbose = verbose, center = center, scale = scale, includevars = includevars)
     treatidx <- Dvars
@@ -858,11 +858,11 @@ setMethod("plotprior", signature(object='cilfit'), function(object, xlab, ylab, 
 
 # show()
 setMethod("show", signature(object='cilfit'), function(object) {
-  cat('cilfit object with outcome of type',object$msfit$outcometype,',',object$msfit$p,'covariates and',object$msfit$family,'error distribution\n')
-  cat(" - Use coef() to obtain BMA estimates for treatment variables\n")
-  cat(" - Use plotprior() to plot the prior inclusion probabilities\n")
-  cat(" Methods available for 'msfit' objects can be applied to element 'msfit', e.g. coef(object$msfit) returns BMA estimates for all variables\n")
-  cat(" Elements $margpp and $margprior contain marginal variable posterior and prior inclusion probabilities\n")
+  message('cilfit object with outcome of type',object$msfit$outcometype,',',object$msfit$p,'covariates and',object$msfit$family,'error distribution\n')
+  message(" - Use coef() to obtain BMA estimates for treatment variables\n")
+  message(" - Use plotprior() to plot the prior inclusion probabilities\n")
+  message(" Methods available for 'msfit' objects can be applied to element 'msfit', e.g. coef(object$msfit) returns BMA estimates for all variables\n")
+  message(" Elements $margpp and $margprior contain marginal variable posterior and prior inclusion probabilities\n")
 }
 )
 

@@ -13,9 +13,9 @@ plot.msfit_ggm= function(x, y, ...) {
 
 
 setMethod("show", signature(object='msfit_ggm'), function(object) {
-  cat('Gaussian graphical model (msfit_ggm object) with ',object$p,'variables\n')
-  cat("Use coef() to get BMA estimates, posterior intervals and posterior marginal prob of entries being non-zero\n")
-  cat("use postProb() for posterior model probabilities")
+  message('Gaussian graphical model (msfit_ggm object) with ',object$p,' variables\n')
+  message("Use coef() to get BMA estimates, posterior intervals and posterior marginal prob of entries being non-zero\n")
+  message("use postProb() for posterior model probabilities")
 }
 )
 
@@ -105,9 +105,9 @@ modelSelectionGGM= function(y, priorCoef=normalidprior(tau=1), priorModel=modelb
   samplerPars= format_GGM_samplerPars(sampler, p=p, niter=niter, burnin=burnin, updates_per_iter=updates_per_iter, updates_per_column = updates_per_column, pbirth=pbirth, pdeath=pdeath, prob_global=prob_global, tempering=tempering, truncratio=truncratio, global_proposal=global_proposal, bounds_LIT=bounds_LIT, verbose=verbose)
     
   #Initial value for sampler
-  if (verbose) cat(" Obtaining initial parameter estimate...")
+  if (verbose) message(" Obtaining initial parameter estimate...")
   Omegaini= initialEstimateGGM(y, Omegaini)
-  if (verbose) cat(" Done\n")
+  if (verbose) message(" Done\n")
     
   #Call C++ function
   proposal= proposaldensity= NULL

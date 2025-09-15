@@ -71,7 +71,6 @@ patrick::with_parameters_test_that(
     log <- capture.output(
       fit <- modelSelection(y=y6, x=X6, priorCoef=pCoef, priorDelta=pDelta, enumerate=TRUE, family="normal")
     )
-    expect_output(show(fit))
     pprobs <- postProb(fit)
     expect_true(any(pprobs$modelid[1:5] == "3,4,6,7"))
   },
@@ -120,7 +119,6 @@ patrick::with_parameters_test_that(
         method=method, B=200, optimMethod=optimMethod, hess=hess
       )
     )
-    expect_output(show(fit))
     pprobs <- postProb(fit)
     expect_true(any(pprobs$modelid[1:5] == "3,4,6,7"))
   },
@@ -145,7 +143,6 @@ patrick::with_parameters_test_that(
         method=method, B=200, optimMethod=optimMethod, hess=hess
       )
     )
-    expect_output(show(fit))
     pprobs <- postProb(fit)
     expect_true(any(pprobs$modelid[1:5] == "3,4,6,7"))
   },

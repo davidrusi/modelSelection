@@ -4,8 +4,8 @@
 
 
 setMethod("show", signature(object='mixturebf'), function(object) {
-  cat('mixturebf object with',object@p,'variables\n\n')
-  cat("Use draw() to obtain posterior samples. postProb() returns posterior probabilities as given below\n\n")
+  message('mixturebf object with ',object@p,' variables\n\n')
+  message("Use draw() to obtain posterior samples. postProb() returns posterior probabilities as given below\n\n")
   print(object@postprob)
 }
 )
@@ -167,7 +167,7 @@ ppOneEmpty <- function(x,g,q,q.niw,mcmcfit,logscale=TRUE,verbose=TRUE) {
     p= ncol(x); k= ncol(mcmcfit$eta)
     probOneEmpty= matrix(NA,nrow=niter,ncol=k)
     logpen= double(niter)
-    if (verbose) cat("Post-processing MCMC output")
+    if (verbose) message("Post-processing MCMC output")
     qdif= q-q.niw; constddir= lgamma(k*q) - lgamma(k*q.niw) + k*(lgamma(q.niw)-lgamma(q))
     for (i in 1:niter) {
         #Extract (eta,mu,Sigma)
@@ -189,9 +189,9 @@ ppOneEmpty <- function(x,g,q,q.niw,mcmcfit,logscale=TRUE,verbose=TRUE) {
         for (jj in 1:k) logprior= logprior - mvtnorm::dmvnorm(mu[[jj]],sigma=g*Sigma[[jj]],log=TRUE)
         d= as.vector(dist(mumat %*% t(chol(Ainv))))^2 #Pairwise Mahalanobis distances between mu's
         logpen[i]= logprior + sum(log(d)) - k*(k-1)/2*log(g) - normctNMix(k=k,p=p)
-        if (verbose & ((i %% (niter/10))==0)) cat(".")
+        if (verbose & ((i %% (niter/10))==0)) message(".")
     }
-    if (verbose) cat("\n")
+    if (verbose) message("\n")
     #Compute mean log-prob, in a way that helps prevent numerical overflow
     logprob= double(k)
     for (i in 1:k) {

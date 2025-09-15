@@ -74,7 +74,7 @@ modelSelectionGLM= function(y, x, data, smoothterms, nknots=9, groups=1:ncol(x),
     nmodels= nrow(models)
     postmean= postvar= matrix(0, nrow=nmodels, ncol=ncol(xstd))
     bicmodel= double(nmodels)
-    if (verbose) cat("Enumerating",nmodels,"models")
+    if (verbose) message("Enumerating ",nmodels," models")
     iterprogress= round(nmodels/10)
     for (i in 1:nmodels) {
       sel= models[i,]
@@ -85,7 +85,7 @@ modelSelectionGLM= function(y, x, data, smoothterms, nknots=9, groups=1:ncol(x),
       postmean[i,sel]= pm$m
       postvar[i,sel]= diag(pm$S)
       bicmodel[i]= BIC(fit1)
-      if (verbose && ((i %% iterprogress)==0)) cat('.')
+      if (verbose && ((i %% iterprogress)==0)) message('.')
     }
     postProb= -bicmodel/2
 

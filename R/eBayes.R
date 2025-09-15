@@ -65,7 +65,7 @@ modelSelection_eBayes= function(Z, wini, niter.mcmc= 5000, niter.mstep= 1000, ni
     # Default hyper-parameters prior variance
     if (missing(priorvar.w)) priorvar.w= eBayes_priorelicit(Z=Z, targetprob=0.95, min_priorprob=0.001, prior="zellner")
     # Get initial parameter estimates
-    if (verbose) cat("Initializing hyper-parameter estimates... ")
+    if (verbose) message("Initializing hyper-parameter estimates... ")
     if (missing(wini)) {
         # Obtain posterior inclusion prob under Beta-Binomial(1,1) model prior
         ms= modelSelection(priorDelta=modelbbprior(), niter=niter.mstep, verbose=FALSE, ...)
@@ -105,24 +105,24 @@ modelSelection_eBayes= function(Z, wini, niter.mcmc= 5000, niter.mstep= 1000, ni
             fbest= fval[i]= eBayes_logit_objective(w, msfit=ms, Z=Z, priorvar.w=priorvar.w, Vinv=Vinv)
             #fbest= fval[i]= eBayes_em_logit_objective(w, msfit=ms, Z=Z, priorvar.w=priorvar.w, Vinv=Vinv)
             wbest= w
-            if (verbose) cat("Done\n\n","Iteration", "Objective function", "Hyper-parameter", "\n", i, fval[i], w, "\n")
+            if (verbose) message("Done\n\n","Iteration", "Objective function", "Hyper-parameter", "\n", i, fval[i], w, "\n")
         }
         if (fval[i+1] >= fval[i]) { noimprove= 0 } else { noimprove= noimprove + 1 }
         if (fval[i+1] > fbest) { fbest= fval[i+1]; wbest= wnew }
         w= wnew
         found = (i >= niter.eBayes) || (maxstep < 0.01) || (noimprove > 1)
         i= i + 1
-        if (verbose) cat(" ", i, w, fval[i], "\n")
+        if (verbose) message(" ", i, w, fval[i], "\n")
     }
     # Run modelSelection with empirical Bayes prior probabilities
-    if (verbose) cat("Done. \n","Final MCMC with best hyper-parameter value... ")
+    if (verbose) message("Done. \n","Final MCMC with best hyper-parameter value... ")
     w= wbest
     priorprob= 1 / (1 + exp(- Z %*% w))
     priorDelta= modelbinomprior(priorprob)
     ms= modelSelection(priorDelta=priorDelta, niter=niter.mcmc, verbose=FALSE, ...)
     ms$eBayes_hyperpar= w
     ms$Z= Z
-    if (verbose) cat("Done\n")
+    if (verbose) message("Done\n")
     return(ms)
 }
 

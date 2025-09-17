@@ -2,7 +2,7 @@
 
 setMethod("show", signature(object='icfit'), function(object) {
   message("icfit object\n\n")
-  message("Model with best ",object$criterion,": ",object$topmodel,"\n\n")
+  message("Model with best ",object$criterion,": ",paste(object$topmodel, sep=' '),"\n\n")
   message("Use summary(), coef() and predict() to get inference for the top model\n")
   message("Use coef(object$msfit) and predict(object$msfit) to get BMA estimates and predictions\n")
 }

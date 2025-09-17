@@ -1,7 +1,7 @@
 Package: modelSelection
 Type: Package
-Version: 1.0.3
-Date: 2025-09-15
+Version: 1.0.4
+Date: 2025-09-17
 Title: High-Dimensional Model Selection
 Authors@R: c(person(given = "David", family = "Rossell", role = c("aut", "cre"), email = "rosselldavid@gmail.com"), person(given = c("John", "D."), family = "Cook", role = "ctb"), person(given = "Donatello", family = "Telesca", role = "aut"), person(given = "P.", family = "Roebuck", role = "ctb"), person(given = "Oriol", family = "Abril", role = "aut"), person(given = "Miquel", family = "Torrens", role = "aut"), person(given = "Peter", family = "Mueller", role = "ctb"), person(given = "William", family = "Hallahan", role = "ctb"))
 Maintainer: David Rossell <rosselldavid@gmail.com>

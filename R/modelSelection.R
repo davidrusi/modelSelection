@@ -787,6 +787,7 @@ createDesign <- function(formula, data, smoothterms, subset, na.action, splineDe
     mt <- if (missing(data)) terms(formula) else terms(formula, data = data)
     mf$formula <- mt
     mf <- eval(mf, parent.frame())
+    if (any(is.na(mf))) stop('Either the outcome or the covariates contain NAs. Please remove the NAs.')
     if (missing(na.action)) {
         naa = getOption("na.action", "na.fail")
         na.action = get(naa)

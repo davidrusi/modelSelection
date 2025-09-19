@@ -19,7 +19,7 @@ localnulltest(y, x, z, x.adjust, localgridsize, localgrid,
 nbaseknots=20, nlocalknots=c(5,10,15), localknots,
 basedegree=3, cutdegree=0,
 usecutbasis=TRUE, priorCoef=normalidprior(),
-priorGroup=priorCoef, priorDelta=modelbbprior(),
+priorGroup=priorCoef, priorModel=modelbbprior(),
 mc.cores=min(4,length(nlocalknots)), return.mcmc=FALSE, verbose=FALSE,
 ...)
 
@@ -28,14 +28,14 @@ Sigma='AR/MA', localgridsize, localgrid, nbaseknots=20,
 nlocalknots=c(5,10,15), localknots,
 basedegree=3, cutdegree=0, usecutbasis=TRUE,
 priorCoef=momprior(), priorGroup=groupmomprior(),
-priorDelta=modelbbprior(), mc.cores=min(4,length(nlocalknots)),
+priorModel=modelbbprior(), mc.cores=min(4,length(nlocalknots)),
 return.mcmc=FALSE, verbose=FALSE, ...)
 
 localnulltest_givenknots(y, x, z, x.adjust, localgridsize,
 localgrid, nbaseknots=20, nlocalknots=10, localknots,
 basedegree=3, cutdegree=0,
 usecutbasis=TRUE, priorCoef=normalidprior(),
-priorGroup=priorCoef, priorDelta=modelbbprior(),
+priorGroup=priorCoef, priorModel=modelbbprior(),
 verbose=FALSE, ...)
 
 localnulltest_fda_givenknots(y, x, z, x.adjust, function_id,
@@ -43,7 +43,7 @@ Sigma='AR/MA', localgridsize, localgrid, nbaseknots=20,
 nlocalknots=10, localknots,
 basedegree=3, cutdegree=0, usecutbasis=TRUE,
 priorCoef=momprior(), priorGroup=groupmomprior(),
-priorDelta=modelbbprior(), verbose=FALSE, ...)
+priorModel=modelbbprior(), verbose=FALSE, ...)
 
 }
 \arguments{
@@ -84,7 +84,7 @@ specifyes the knots for one resolution}
   \code{modelSelection}}
 \item{priorGroup}{Prior on grouped coefficients, passed on to
   \code{modelSelection}}
-\item{priorDelta}{Prior on the models, passed on to
+\item{priorModel}{Prior on the models, passed on to
   \code{modelSelection}}
 \item{mc.cores}{If package parallel is available on your system and
   \code{nlocalknots} has several entries defining several resolution

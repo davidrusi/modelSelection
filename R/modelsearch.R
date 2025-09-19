@@ -1,16 +1,16 @@
-modelsearchBlockDiag <- function(y, x, priorCoef=momprior(tau=0.348), priorDelta=modelbbprior(1,1), priorVar=igprior(0.01,0.01), blocksize=10, maxiter=10, maxvars=100, maxlogmargdrop=20, maxenum=10, verbose=TRUE) {
+modelsearchBlockDiag <- function(y, x, priorCoef=momprior(tau=0.348), priorModel=modelbbprior(1,1), priorVar=igprior(0.01,0.01), blocksize=10, maxiter=10, maxvars=100, maxlogmargdrop=20, maxenum=10, verbose=TRUE) {
     n <- length(y); p <- ncol(x)
     #Check and format input parameters
-    if (priorDelta@priorDistr=='binomial' & ('p' %in% names(priorDelta@priorPars))) {
-        rho <- priorDelta@priorPars[['p']]
+    if (priorModel@priorDistr=='binomial' & ('p' %in% names(priorModel@priorPars))) {
+        rho <- priorModel@priorPars[['p']]
         if (length(rho)>1) stop("modelsearchBlockDiag not implemented for vector p in modelbinomprior")
         priorModel <- function(nvar) nvar*log(rho) + (p-nvar)*log(1-rho)
         priorModelBlock <- function(nvar,blocksize) nvar*log(rho) + (blocksize-nvar)*log(1-rho)
-    } else if (priorDelta@priorDistr=='binomial' & !('p' %in% names(priorDelta@priorPars))) {
-        alpha=priorDelta@priorPars['alpha.p']; beta=priorDelta@priorPars['beta.p']
+    } else if (priorModel@priorDistr=='binomial' & !('p' %in% names(priorModel@priorPars))) {
+        alpha=priorModel@priorPars['alpha.p']; beta=priorModel@priorPars['beta.p']
         priorModel <- function(nvar) lbeta(nvar + alpha, p - nvar + beta) - lbeta(alpha, beta)
         priorModelBlock <- function(nvar,blocksize) rep(-blocksize*log(2),length(nvar)) #set coolblock prior to unif. post prob based on correct priorModel
-    } else if (priorDelta@priorDistr=='uniform') {
+    } else if (priorModel@priorDistr=='uniform') {
         rho <- 0.5
         priorModel <- function(nvar) rep(-p*log(2),length(nvar))
         priorModelBlock <- function(nvar,blocksize) rep(-blocksize*log(2),length(nvar))
@@ -78,7 +78,7 @@ modelsearchBlockDiag <- function(y, x, priorCoef=momprior(tau=0.348), priorDelta
     sel <- sel[order(sel)]
     xsel <- x[,sel,drop=FALSE]
     if (is.null(colnames(xsel))) colnames(xsel) <- paste("x",sel,sep='')
-    ms <- modelSelection(y=y,x=xsel,center=FALSE,scale=FALSE,enumerate=TRUE,maxvars=min(c(ncol(xsel),10)),priorCoef=priorCoef,priorDelta=modelunifprior(),priorVar=priorVar,verbose=FALSE)
+    ms <- modelSelection(y=y,x=xsel,center=FALSE,scale=FALSE,enumerate=TRUE,maxvars=min(c(ncol(xsel),10)),priorCoef=priorCoef,priorModel=modelunifprior(),priorVar=priorVar,verbose=FALSE)
     nvarsenum <- sapply(strsplit(as.character(ms$models$modelid),split=','),length)
     modelid <- lapply(strsplit(as.character(ms$models$modelid),split=','), function(i) sel[as.numeric(i)])
     ct <- marginalLikelihood(sel=integer(0),family='normal',priorCoef=priorCoef,priorVar=priorVar,y=y,x=x,logscale=TRUE) - log(ms$models[ms$models$modelid=='','pp'])

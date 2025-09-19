@@ -8,8 +8,8 @@ patrick::with_parameters_test_that(
   "modelSelection without groups works for", {
     pDelta <- modelbbprior(1,1)
     log <- capture.output(
-      fit1 <- modelSelection(y=y3, x=X3, priorCoef=pCoef, priorDelta=pDelta, enumerate=TRUE, family=family, priorSkew=pCoef),
-      fit3 <- modelSelection(as.formula("y~X2+X3+X4"), data=data.frame(X3, y=y3), priorCoef=pCoef, priorDelta=pDelta, enumerate=TRUE, family=family, priorSkew=pCoef)
+      fit1 <- modelSelection(y=y3, x=X3, priorCoef=pCoef, priorModel=pDelta, enumerate=TRUE, family=family, priorSkew=pCoef),
+      fit3 <- modelSelection(as.formula("y~X2+X3+X4"), data=data.frame(X3, y=y3), priorCoef=pCoef, priorModel=pDelta, enumerate=TRUE, family=family, priorSkew=pCoef)
     )
     pp1 <- postProb(fit1)
     pp3 <- postProb(fit3)
@@ -41,7 +41,7 @@ patrick::with_parameters_test_that(
     groups <- c(1, 1, 2, 2, 3, 4, 4)
     log <- capture.output(
       fit <- modelSelection(
-        y=y6, x=X6, priorCoef=pCoef, priorDelta=pDelta, enumerate=TRUE,
+        y=y6, x=X6, priorCoef=pCoef, priorModel=pDelta, enumerate=TRUE,
         family=family, priorSkew=pCoef, priorGroup=pCoef, groups=groups
       )
     )
@@ -69,7 +69,7 @@ patrick::with_parameters_test_that(
   "model space prior work in modelSelection:", {
     pCoef <- momprior(tau=0.348)
     log <- capture.output(
-      fit <- modelSelection(y=y6, x=X6, priorCoef=pCoef, priorDelta=pDelta, enumerate=TRUE, family="normal")
+      fit <- modelSelection(y=y6, x=X6, priorCoef=pCoef, priorModel=pDelta, enumerate=TRUE, family="normal")
     )
     pprobs <- postProb(fit)
     expect_true(any(pprobs$modelid[1:5] == "3,4,6,7"))
@@ -84,13 +84,13 @@ patrick::with_parameters_test_that(
     constraints <- list(i0, 1, i0, 3, i0, i0, 6)
     log <- capture.output(
       fit <- modelSelection(
-        y=y6, x=X6, priorDelta=pDelta, priorConstraints=pConstr,
+        y=y6, x=X6, priorModel=pDelta, priorConstraints=pConstr,
         enumerate=TRUE, constraints=constraints
       )
     )
     log <- capture.output(
       fit_asym <- modelSelection(
-        y=y6, x=X6, priorDelta=modelbinomprior(p=c(0.7, 0.6, 0.2, 0.4)),
+        y=y6, x=X6, priorModel=modelbinomprior(p=c(0.7, 0.6, 0.2, 0.4)),
         priorConstraints=pConstr, enumerate=TRUE, constraints=constraints
       )
     )
@@ -115,7 +115,7 @@ patrick::with_parameters_test_that(
     pDelta <- modelbbprior(1,1)
     log <- capture.output(
       fit <- modelSelection(
-        y=y6, x=X6, priorCoef=pCoef, priorDelta=pDelta, enumerate=TRUE, family="normal",
+        y=y6, x=X6, priorCoef=pCoef, priorModel=pDelta, enumerate=TRUE, family="normal",
         method=method, B=200, optimMethod=optimMethod, hess=hess
       )
     )
@@ -139,7 +139,7 @@ patrick::with_parameters_test_that(
     pDelta <- modelbbprior(1,1)
     log <- capture.output(
       fit <- modelSelection(
-        y=y6, x=X6, priorCoef=pCoef, priorDelta=pDelta, enumerate=TRUE, family="laplace",
+        y=y6, x=X6, priorCoef=pCoef, priorModel=pDelta, enumerate=TRUE, family="laplace",
         method=method, B=200, optimMethod=optimMethod, hess=hess
       )
     )

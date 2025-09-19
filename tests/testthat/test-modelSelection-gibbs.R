@@ -8,8 +8,8 @@ patrick::with_parameters_test_that(
   "modelSelection without groups works for", {
     pDelta <- modelbbprior(1,1)
     log <- capture.output(
-      fit1 <- modelSelection(y=y3, x=X3, priorCoef=pCoef, priorDelta=pDelta, enumerate=FALSE, family=family, priorSkew=pCoef),
-      fit3 <- modelSelection(as.formula("y~X2+X3+X4"), data=data.frame(X3, y=y3), priorCoef=pCoef, priorDelta=pDelta, enumerate=FALSE, family=family, priorSkew=pCoef)
+      fit1 <- modelSelection(y=y3, x=X3, priorCoef=pCoef, priorModel=pDelta, enumerate=FALSE, family=family, priorSkew=pCoef),
+      fit3 <- modelSelection(as.formula("y~X2+X3+X4"), data=data.frame(X3, y=y3), priorCoef=pCoef, priorModel=pDelta, enumerate=FALSE, family=family, priorSkew=pCoef)
     )
     pp1 <- postProb(fit1)
     pp3 <- postProb(fit3)
@@ -41,7 +41,7 @@ patrick::with_parameters_test_that(
     groups <- c(1, 1, 2, 2, 3, 4, 4)
     log <- capture.output(
       fit <- modelSelection(
-        y=y6, x=X6, priorCoef=pCoef, priorDelta=pDelta, enumerate=FALSE,
+        y=y6, x=X6, priorCoef=pCoef, priorModel=pDelta, enumerate=FALSE,
         family=family, priorSkew=pCoef, priorGroup=pCoef, groups=groups
       )
     )
@@ -70,7 +70,7 @@ patrick::with_parameters_test_that(
     groups <- c(1, 1, 2, 2, 3, 4, 4)
     log <- capture.output(
       fit <- modelSelection(
-        y=y6, x=X6, priorCoef=pCoef, priorDelta=pDelta, enumerate=FALSE, XtXprecomp=FALSE,
+        y=y6, x=X6, priorCoef=pCoef, priorModel=pDelta, enumerate=FALSE, XtXprecomp=FALSE,
         family=family, priorSkew=pCoef, priorGroup=pGroup, groups=groups
       )
     )
@@ -90,9 +90,9 @@ test_that(
     pDelta <- modelbbprior(1,1)
     log <- capture.output(
       fit <- modelSelection(
-        y6 ~ ., data=data.frame(y6, X6[,2:7]), priorCoef=pCoef, priorDelta=pDelta, enumerate=FALSE,
+        y6 ~ ., data=data.frame(y6, X6[,2:7]), priorCoef=pCoef, priorModel=pDelta, enumerate=FALSE,
         smoothterms= ~ X1 + X2 + X3 + X4 + X5 + X6, family="normal", priorSkew=pCoef, priorGroup=pCoef
-        #y6~X6[,2:7], priorCoef=pCoef, priorDelta=pDelta, enumerate=FALSE,
+        #y6~X6[,2:7], priorCoef=pCoef, priorModel=pDelta, enumerate=FALSE,
         #smoothterms= ~ X6[,2:7], family="normal", priorSkew=pCoef, priorGroup=pCoef
       )
     )

@@ -33,8 +33,8 @@ theta <- matrix(c(1,1,0),ncol=1)
 y <- x %*% theta + rnorm(100)
 
 priorCoef <- momprior(tau=0.348)  # Default MOM prior on parameters
-priorDelta <- modelbbprior(1,1)   # Beta-Binomial prior for model space
-fit1 <- modelSelection(y ~ x[,1]+x[,2]+x[,3], priorCoef=priorCoef, priorDelta=priorDelta)
+priorModel <- modelbbprior(1,1)   # Beta-Binomial prior for model space
+fit1 <- modelSelection(y ~ x[,1]+x[,2]+x[,3], priorCoef=priorCoef, priorModel=priorModel)
 # Output
 # Enumerating models...
 # Computing posterior probabilities................ Done.

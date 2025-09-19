@@ -30,7 +30,7 @@ summary.icfit <- function(object, ...) {
 
 checkargs_IC <- function(...) {
     params= eval(quote(list(...)))
-    forbiddenpars= c('priorCoef','priorDelta','center','scale')
+    forbiddenpars= c('priorCoef','priorModel','center','scale')
     if (any(forbiddenpars %in% names(params))) stop(paste("Arguments",paste(forbiddenpars,collapse=", "),"have set values so they cannot be passed on to modelSelection"))
 }
 
@@ -76,7 +76,7 @@ extractmsIC <- function(ms, getICfun) {
 
 bestBIC <- function(...) {
     checkargs_IC(...)
-    ms= modelSelection(..., priorCoef=bic(), priorDelta=modelunifprior(), center=FALSE, scale=FALSE)
+    ms= modelSelection(..., priorCoef=bic(), priorModel=modelunifprior(), center=FALSE, scale=FALSE)
     ans= extractmsIC(ms, getBIC)
     ans$criterion= 'BIC'
     return(ans)
@@ -84,7 +84,7 @@ bestBIC <- function(...) {
 
 bestAIC <- function(...) {
     checkargs_IC(...)
-    ms= modelSelection(..., priorCoef=aic(), priorDelta=modelunifprior(), center=FALSE, scale=FALSE)
+    ms= modelSelection(..., priorCoef=aic(), priorModel=modelunifprior(), center=FALSE, scale=FALSE)
     ans= extractmsIC(ms, getAIC)
     ans$criterion= 'AIC'
     return(ans)
@@ -92,7 +92,7 @@ bestAIC <- function(...) {
 
 bestEBIC <- function(...) {
     checkargs_IC(...)
-    ms= modelSelection(..., priorCoef=bic(), priorDelta=modelbbprior(), center=FALSE, scale=FALSE)
+    ms= modelSelection(..., priorCoef=bic(), priorModel=modelbbprior(), center=FALSE, scale=FALSE)
     ans= extractmsIC(ms, getEBIC)
     ans$criterion= 'EBIC'
     return(ans)
@@ -101,13 +101,13 @@ bestEBIC <- function(...) {
 bestIC <- function(..., penalty) {
     if (missing(penalty)) stop("penalty must be specified. Alternatively consider using bestBIC(), bestEBIC() or bestAIC()")
     checkargs_IC(...)
-    ms= modelSelection(..., priorCoef=ic(penalty), priorDelta=modelunifprior(), center=FALSE, scale=FALSE)
+    ms= modelSelection(..., priorCoef=ic(penalty), priorModel=modelunifprior(), center=FALSE, scale=FALSE)
     ans= extractmsIC(ms, getIC)
     ans$criterion= paste('GIC (penalty=',penalty,')',collapse='')
     return(ans)
 }
 
-findmodels_fast <- function(y, x, data, smoothterms, nknots=9, groups, constraints, enumerate, includevars, maxvars, niter=5000, family='normal', priorCoef, priorGroup, priorDelta=modelbbprior(1,1), priorConstraints, priorVar=igprior(.01,.01), priorSkew=momprior(tau=0.348), neighbours, phi, deltaini, adj.overdisp='intercept', hess='asymp', optimMethod, optim_maxit, initpar='none', B=10^5, XtXprecomp, verbose=TRUE) {
+findmodels_fast <- function(y, x, data, smoothterms, nknots=9, groups, constraints, enumerate, includevars, maxvars, niter=5000, family='normal', priorCoef, priorGroup, priorModel=modelbbprior(1,1), priorConstraints, priorVar=igprior(.01,.01), priorSkew=momprior(tau=0.348), neighbours, phi, deltaini, adj.overdisp='intercept', hess='asymp', optimMethod, optim_maxit, initpar='none', B=10^5, XtXprecomp, verbose=TRUE) {
   if ((family == "normal") || (family == "binomial")) {
     loss <- ifelse(family == "normal", "SquaredError", "Logistic")
     # Build design matrix
@@ -120,7 +120,7 @@ findmodels_fast <- function(y, x, data, smoothterms, nknots=9, groups, constrain
     models <- unique(t(as.matrix(coef(fit) != 0)))
     if (ncol(models) > ncol(x)) models <- models[,-1] #remove intercept
   } else {
-    fit <- modelSelection(y=y, x=x, data=data, initSearch='CDA', burnin=0, niter=1, center=FALSE, scale=FALSE, smoothterms=smoothterms, nknots=nknots, groups=groups, constraints=constraints, enumerate=enumerate, includevars=includevars, maxvars=maxvars, priorCoef=priorCoef, priorGroup=priorGroup, priorDelta=priorDelta, priorConstraints=priorConstraints, priorVar=priorVar, priorSkew=priorSkew, neighbours=neighbours, phi=phi, deltaini=deltaini, adj.overdisp=adj.overdisp, hess=hess, optimMethod=optimMethod, optim_maxit=optim_maxit, initpar=initpar, XtXprecomp=XtXprecomp, verbose=verbose)
+    fit <- modelSelection(y=y, x=x, data=data, initSearch='CDA', burnin=0, niter=1, center=FALSE, scale=FALSE, smoothterms=smoothterms, nknots=nknots, groups=groups, constraints=constraints, enumerate=enumerate, includevars=includevars, maxvars=maxvars, priorCoef=priorCoef, priorGroup=priorGroup, priorModel=priorModel, priorConstraints=priorConstraints, priorVar=priorVar, priorSkew=priorSkew, neighbours=neighbours, phi=phi, deltaini=deltaini, adj.overdisp=adj.overdisp, hess=hess, optimMethod=optimMethod, optim_maxit=optim_maxit, initpar=initpar, XtXprecomp=XtXprecomp, verbose=verbose)
     models <- matrix(fit$postMode == 1, nrow=1)
   }
   return(models)
@@ -129,7 +129,7 @@ findmodels_fast <- function(y, x, data, smoothterms, nknots=9, groups, constrain
 
 bestBIC_fast <- function(...) {
   args <- list(...)
-  args$models <- findmodels_fast(..., priorCoef=bic(), priorDelta=modelunifprior())
+  args$models <- findmodels_fast(..., priorCoef=bic(), priorModel=modelunifprior())
   ans <- do.call(bestBIC, args)
   #ans <- bestEBIC(..., models=models)
   return(ans)  
@@ -137,21 +137,21 @@ bestBIC_fast <- function(...) {
 
 bestAIC_fast <- function(...) {
   args <- list(...)
-  args$models <- findmodels_fast(..., priorCoef=aic(), priorDelta=modelunifprior())
+  args$models <- findmodels_fast(..., priorCoef=aic(), priorModel=modelunifprior())
   ans <- do.call(bestAIC, args)
   return(ans)  
 }
 
 bestEBIC_fast <- function(...) {
   args <- list(...)
-  args$models <- findmodels_fast(..., priorCoef=bic(), priorDelta=modelbbprior())
+  args$models <- findmodels_fast(..., priorCoef=bic(), priorModel=modelbbprior())
   ans <- do.call(bestEBIC, args)
   return(ans)  
 }
 
 bestIC_fast <- function(..., penalty) {
   args <- list(...)
-  args$models <- findmodels_fast(..., priorCoef=ic(penalty), priorDelta=modelunifprior())
+  args$models <- findmodels_fast(..., priorCoef=ic(penalty), priorModel=modelunifprior())
   ans <- do.call(bestIC, args, penalty)
   return(ans)  
 }
@@ -170,8 +170,8 @@ setMethod("getAIC", signature(object='msfit'), function(object) {
 
 setMethod("getBIC", signature(object='msfit'), function(object) {
     pc= object$priors$priorCoef
-    pm= object$priors$priorDelta
-    if ((pc@priorDistr != 'bic') || (pm@priorDistr != 'uniform')) stop("To obtain BIC you should set priorCoef=bic() and priorDelta=modelunifprior() when calling modelSelection")
+    pm= object$priors$priorModel
+    if ((pc@priorDistr != 'bic') || (pm@priorDistr != 'uniform')) stop("To obtain BIC you should set priorCoef=bic() and priorModel=modelunifprior() when calling modelSelection")
     ans= getIC(object)
     names(ans)[names(ans)=='ic']= 'bic'
     return(ans)
@@ -189,9 +189,9 @@ setMethod("getIC", signature(object='msfit'), function(object) {
 
 setMethod("getEBIC", signature(object='msfit'), function(object) {
     pc= object$priors$priorCoef
-    pm= object$priors$priorDelta
+    pm= object$priors$priorModel
     isbbprior= (pm@priorDistr == 'binomial') && all(pm@priorPars == c(1,1))
-    if ((pc@priorDistr != 'bic') || !isbbprior) stop("To obtain BIC you should set priorCoef=bic() and priorDelta=modelbbprior() when calling modelSelection")
+    if ((pc@priorDistr != 'bic') || !isbbprior) stop("To obtain BIC you should set priorCoef=bic() and priorModel=modelbbprior() when calling modelSelection")
     ebic = -2  * ( object$postProb + log(object$p+1) )
     ans= dplyr::tibble(modelid=object$modelid, ebic=ebic)
     ans= ans[order(ans$ebic),]

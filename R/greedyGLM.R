@@ -14,11 +14,11 @@
 # - y, x, xadj: response, covariates and adjustment covariates
 # - family: family argument passed on to glm
 # - priorCoef: prior on regression coefficients
-# - priorDelta: prior on model space
+# - priorModel: prior on model space
 # - maxit: maximum number of iterations
 # Output: logical vector with length ncol(x) indicating the variables included in the model
 
-greedyGLM <- function(y, x, xadj, family, priorCoef, priorDelta, maxit=100) {
+greedyGLM <- function(y, x, xadj, family, priorCoef, priorModel, maxit=100) {
   pluginJoint <- function(sel) {
     p <- sum(sel)
     if (p>0 & p<=length(y)) {
@@ -31,12 +31,12 @@ greedyGLM <- function(y, x, xadj, family, priorCoef, priorDelta, maxit=100) {
     return(ans)
   }
   #Set prior on model space
-  if (priorDelta@priorDistr=='uniform') {
+  if (priorModel@priorDistr=='uniform') {
     modelprior <- unifPrior
-  } else if (priorDelta@priorDistr=='binomial') {
-    if (all(c('alpha.p','beta.p') %in% names(priorDelta@priorPars))) {
-      modelprior= function(sel) bbPrior(sel,alpha=priorDelta@priorPars['alpha.p'],beta=priorDelta@priorPars['beta.p'],logscale=TRUE)
-    } else modelprior= function(sel) binomPrior(sel, prob=priorDelta@priorPars[['p']], logscale=TRUE)
+  } else if (priorModel@priorDistr=='binomial') {
+    if (all(c('alpha.p','beta.p') %in% names(priorModel@priorPars))) {
+      modelprior= function(sel) bbPrior(sel,alpha=priorModel@priorPars['alpha.p'],beta=priorModel@priorPars['beta.p'],logscale=TRUE)
+    } else modelprior= function(sel) binomPrior(sel, prob=priorModel@priorPars[['p']], logscale=TRUE)
   } else {
     stop('Prior on model space prDelta not recognized')
   }

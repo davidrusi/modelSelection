@@ -1,4 +1,4 @@
-modelSelectionGLM= function(y, x, data, smoothterms, nknots=9, groups=1:ncol(x), constraints, center=TRUE, scale=TRUE, includevars=rep(FALSE,ncol(x)), maxvars, familyglm= gaussian(), priorCoef, priorGroup, priorVar, priorDelta= modelbbprior(1,1), models, verbose= TRUE) {
+modelSelectionGLM= function(y, x, data, smoothterms, nknots=9, groups=1:ncol(x), constraints, center=TRUE, scale=TRUE, includevars=rep(FALSE,ncol(x)), maxvars, familyglm= gaussian(), priorCoef, priorGroup, priorVar, priorModel= modelbbprior(1,1), models, verbose= TRUE) {
     #Enumerate all or specified models and return posterior prob as approximated by BIC. Enumerated models satisfy group and hierarchical restrictions from factors and interaction terms
     #Input
     # - data: data.frame with a column named 'y' containing the response
@@ -90,14 +90,14 @@ modelSelectionGLM= function(y, x, data, smoothterms, nknots=9, groups=1:ncol(x),
     postProb= -bicmodel/2
 
     #Add model prior probabilities
-    if (priorDelta@priorDistr == "uniform") {
+    if (priorModel@priorDistr == "uniform") {
         priorp= apply(models, 1, function(z) { unifPrior(sel=z, logscale=TRUE, groups=groups, constraints=constraints) })
-    } else if (priorDelta@priorDistr == "binomial") {
-        if ('p' %in% names(priorDelta@priorPars)) {
-            priorp= apply(models, 1, function(z) { binomPrior(sel=z, prob=priorDelta@priorPars[['p']], logscale=TRUE, groups=groups, constraints=constraints) })
-        } else if (all(c('alpha.p','beta.p') %in% names(priorDelta@priorPars))) {
-            priorp= apply(models, 1, function(z) { bbPrior(sel=z, alpha=priorDelta@priorPars['alpha.p'], beta=priorDelta@priorPars['beta.p'], logscale=TRUE, groups=groups, constraints=constraints) })
-        } else { stop("priorDelta not recognized") }
+    } else if (priorModel@priorDistr == "binomial") {
+        if ('p' %in% names(priorModel@priorPars)) {
+            priorp= apply(models, 1, function(z) { binomPrior(sel=z, prob=priorModel@priorPars[['p']], logscale=TRUE, groups=groups, constraints=constraints) })
+        } else if (all(c('alpha.p','beta.p') %in% names(priorModel@priorPars))) {
+            priorp= apply(models, 1, function(z) { bbPrior(sel=z, alpha=priorModel@priorPars['alpha.p'], beta=priorModel@priorPars['beta.p'], logscale=TRUE, groups=groups, constraints=constraints) })
+        } else { stop("priorModel not recognized") }
     }
     postProb= postProb + priorp
     postMode= models[which.max(postProb),]
@@ -114,7 +114,7 @@ modelSelectionGLM= function(y, x, data, smoothterms, nknots=9, groups=1:ncol(x),
     o= order(models$pp,decreasing=TRUE)
     models= models[o,]; postmean= postmean[o,]; postvar= postvar[o,]
 
-    priors= list(priorCoef=priorCoef, priorGroup=priorGroup, priorDelta=priorDelta, priorConstraints=priorDelta, priorVar=priorVar, priorSkew=NULL)
+    priors= list(priorCoef=priorCoef, priorGroup=priorGroup, priorModel=priorModel, priorConstraints=priorModel, priorVar=priorVar, priorSkew=NULL)
     names(constraints)= paste('group',0:(length(constraints)-1))
     ans= list(postSample=postSample,margpp=margpp,postMode=postMode,postModeProb=postModeProb,postProb=postProb,postmean=postmean,postvar=postvar,family=family,p=ncol(xstd),enumerate=enumerate,priors=priors,ystd=ystd,xstd=xstd,groups=groups,constraints=constraints,stdconstants=stdconstants,outcometype=outcometype,call=call)
     ans$models= models

@@ -420,7 +420,7 @@ defaultmom= function(outcometype, family, verbose=TRUE) {
 
 
 #### General model selection routines
-modelSelection <- function(y, x, data, smoothterms, nknots=9, groups, constraints, center=TRUE, scale=TRUE, enumerate, includevars, models, maxvars, niter=5000, thinning=1, burnin=round(niter/10), family='normal', priorCoef, priorGroup, priorDelta=modelbbprior(1,1), priorConstraints, priorVar=igprior(.01,.01), priorSkew=momprior(tau=0.348), neighbours, phi, deltaini, initSearch='CDA', method='auto', adj.overdisp='intercept', hess='asymp', optimMethod, optim_maxit, initpar='none', B=10^5, XtXprecomp, verbose=TRUE) {
+modelSelection <- function(y, x, data, smoothterms, nknots=9, groups, constraints, center=TRUE, scale=TRUE, enumerate, includevars, models, maxvars, niter=5000, thinning=1, burnin=round(niter/10), family='normal', priorCoef, priorGroup, priorModel=modelbbprior(1,1), priorConstraints, priorVar=igprior(.01,.01), priorSkew=momprior(tau=0.348), neighbours, phi, deltaini, initSearch='CDA', method='auto', adj.overdisp='intercept', hess='asymp', optimMethod, optim_maxit, initpar='none', B=10^5, XtXprecomp, verbose=TRUE) {
 # Input
 # - y: either formula with the regression equation or vector with response variable. If a formula, arguments x, groups & constraints are ignored
 # - x: design matrix with all potential predictors
@@ -440,7 +440,7 @@ modelSelection <- function(y, x, data, smoothterms, nknots=9, groups, constraint
 # - family: assumed residual distribution ('normal','twopiecenormal','laplace','twopiecelaplace')
 # - priorCoef: prior distribution for the coefficients. Must be object of class 'msPriorSpec' with slot priorType set to 'coefficients'. Possible values for slot priorDistr are 'pMOM', 'piMOM' and 'peMOM'.
 # - priorGroup: prior on grouped coefficients, as indicated by groups
-# - priorDelta: prior on model indicator space. Must be object of class 'msPriorSpec' with slot priorType set to 'modelIndicator'. Possible values for slot priorDistr are 'uniform' and 'binomial'
+# - priorModel: prior on model indicator space. Must be object of class 'msPriorSpec' with slot priorType set to 'modelIndicator'. Possible values for slot priorDistr are 'uniform' and 'binomial'
 # - priorVar: prior on residual variance. Must be object of class 'msPriorSpec' with slot priorType set to 'nuisancePars'. Slot priorDistr must be equal to 'invgamma'.
 # - priorSkew: prior on residual skewness parameter. Ignored unless family=='twopiecenormal' or 'twopiecelaplace'
 # - neighbours: Only used if priorCoef is an icarplus prior. neighbours is a list with the same length as the design matrix. Its entry j should be a vector indicating the neighbours of j, and have 0 length if j has no neighbours.
@@ -560,8 +560,8 @@ modelSelection <- function(y, x, data, smoothterms, nknots=9, groups, constraint
   alpha=tmp$alpha; lambda=tmp$lambda; taualpha=tmp$taualpha; fixatanhalpha=tmp$fixatanhalpha
   priorCoef= tmp$priorCoef; priorGroup= tmp$priorGroup
     
-  priorConstraints <- defaultpriorConstraints(priorDelta, priorConstraints)
-  tmp= formatmsPriorsModel(priorDelta=priorDelta, priorConstraints=priorConstraints, constraints=constraints)
+  priorConstraints <- defaultpriorConstraints(priorModel, priorConstraints)
+  tmp= formatmsPriorsModel(priorModel=priorModel, priorConstraints=priorConstraints, constraints=constraints)
   prDelta=tmp$prDelta; prDeltap=tmp$prDeltap; parprDeltap=tmp$parprDeltap
   prConstr=tmp$prConstr; prConstrp= tmp$prConstrp; parprConstrp= tmp$parprConstrp
 
@@ -644,7 +644,7 @@ modelSelection <- function(y, x, data, smoothterms, nknots=9, groups, constraint
     names(margpp) <- c(nn,'family.normal','family.tpnormal','family.laplace','family.tplaplace')
   }
 
-  priors= list(priorCoef=priorCoef, priorGroup=priorGroup, priorDelta=priorDelta, priorConstraints=priorConstraints, priorVar=priorVar, priorSkew=priorSkew)
+  priors= list(priorCoef=priorCoef, priorGroup=priorGroup, priorModel=priorModel, priorConstraints=priorConstraints, priorVar=priorVar, priorSkew=priorSkew)
   if (length(uncens)>0) { ystd[ordery]= ystd; uncens[ordery]= uncens; ystd= survival::Surv(time=ystd, event= uncens); xstd[ordery,]= xstd }
   names(constraints)= paste('group',0:(length(constraints)-1))
 
@@ -1239,47 +1239,47 @@ formatmsPriorsMarg <- function(priorCoef, priorGroup, priorVar, priorSkew, n) {
   return(ans)
 }
 
-defaultpriorConstraints <- function(priorDelta, priorConstraints) {
+defaultpriorConstraints <- function(priorModel, priorConstraints) {
   if (missing(priorConstraints)) {
-    if ((priorDelta@priorDistr=='binomial') && ('p' %in% names(priorDelta@priorPars)) && (length(priorDelta@priorPars[['p']]) > 1)) {
+    if ((priorModel@priorDistr=='binomial') && ('p' %in% names(priorModel@priorPars)) && (length(priorModel@priorPars[['p']]) > 1)) {
       priorConstraints <- modelbinomprior(p=0.5)
     } else {
-      priorConstraints <- priorDelta
+      priorConstraints <- priorModel
     }
   }
   return(priorConstraints)
 }
 
 #Routine to format modelSelection prior distribution parameters in model space
-#Input: priorDelta, priorConstraints, constraints
+#Input: priorModel, priorConstraints, constraints
 #Output: model space prior (prDelta, prDeltap, parprDeltap) and constraints (prConstr,prConstrp,parprConstrp)
-formatmsPriorsModel <- function(priorDelta, priorConstraints, constraints) {
+formatmsPriorsModel <- function(priorModel, priorConstraints, constraints) {
   #Prior on model space (parameters not subject to hierarchical constraints)
   n_unconstrained <- sum(sapply(constraints, function(x) length(x) == 0))
   n_constrained <- length(constraints) - n_unconstrained
-  if (priorDelta@priorDistr=='uniform') {
+  if (priorModel@priorDistr=='uniform') {
     prDelta <- as.integer(0)
     prDeltap <- as.double(0)
     parprDeltap <- double(2)
-  } else if (priorDelta@priorDistr=='binomial') {
-    if ('p' %in% names(priorDelta@priorPars)) {
+  } else if (priorModel@priorDistr=='binomial') {
+    if ('p' %in% names(priorModel@priorPars)) {
       prDelta <- as.integer(1)
-      prDeltap <- as.double(priorDelta@priorPars[['p']])
+      prDeltap <- as.double(priorModel@priorPars[['p']])
       if (any(prDeltap<=0) | any(prDeltap>1)) stop("For the binomial model prior the inclusion probabilities p must lie in (0,1]")
-      if ((length(prDeltap) != 1) & (length(prDeltap) != n_unconstrained)) stop("p in priorDelta must be a scalar or have length=number of unconstrained variables")
+      if ((length(prDeltap) != 1) & (length(prDeltap) != n_unconstrained)) stop("p in priorModel must be a scalar or have length=number of unconstrained variables")
       parprDeltap <- as.double(length(prDeltap))
     } else {
       prDelta <- as.integer(2)
       prDeltap <- as.double(.5)
-      parprDeltap <- as.double(priorDelta@priorPars[c('alpha.p','beta.p')])
+      parprDeltap <- as.double(priorModel@priorPars[c('alpha.p','beta.p')])
     }
-  } else if (priorDelta@priorDistr=='complexity') {
+  } else if (priorModel@priorDistr=='complexity') {
       prDelta <- as.integer(3)
-      prDeltap <- as.double(priorDelta@priorPars['c'])
-      if (prDeltap<0) stop("c must be >0 for priorDelta@priorDistr=='complexity'")
+      prDeltap <- as.double(priorModel@priorPars['c'])
+      if (prDeltap<0) stop("c must be >0 for priorModel@priorDistr=='complexity'")
       parprDeltap <- double(2)
   } else {
-    stop('Prior specified in priorDelta not recognized')
+    stop('Prior specified in priorModel not recognized')
   }
   #Prior on model space (parameters subject to hierarchical constraints)
   if (priorConstraints@priorDistr=='uniform') {

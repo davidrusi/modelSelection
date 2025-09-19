@@ -32,7 +32,7 @@ groups, constraints, center=TRUE, scale=TRUE,
 enumerate, includevars, models,
 maxvars, niter=5000, thinning=1,
 burnin=round(niter/10), family='normal', priorCoef,
-priorGroup, priorDelta=modelbbprior(1,1),
+priorGroup, priorModel=modelbbprior(1,1),
 priorConstraints,
 priorVar=igprior(.01,.01),
 priorSkew=momprior(tau=0.348),
@@ -45,7 +45,7 @@ modelSelection_eBayes(Z, wini, niter.mcmc= 5000, niter.mstep= 1000,
 niter.eBayes= 20, priorvar.w, verbose=TRUE, ...)
 
 modelsearchBlockDiag(y, x, priorCoef=momprior(tau=0.348),
-priorDelta=modelbbprior(1,1), priorVar=igprior(0.01,0.01),
+priorModel=modelbbprior(1,1), priorVar=igprior(0.01,0.01),
 blocksize=10, maxiter=10, maxvars=100, maxlogmargdrop=20,
 maxenum=10, verbose=TRUE)
 }
@@ -115,7 +115,7 @@ to the number of variables in \code{x}. }
   predictors with >2 categories, splines). Created by
   \code{groupmomprior}, \code{groupemomprior},
   \code{groupimomprior} or \code{groupzellnerprior}}
-\item{priorDelta}{Prior on model space. Use \code{modelbbprior()}
+\item{priorModel}{Prior on model space. Use \code{modelbbprior()}
   for Beta-Binomial prior, \code{modelbinomprior(p)} for Binomial
   prior with prior inclusion probability \code{p},
   \code{modelcomplexprior} for Complexity prior,
@@ -315,17 +315,17 @@ df <- data.frame(y, x)
 
 #Specify prior parameters
 priorCoef <- momprior()
-priorDelta <- modelunifprior()
+priorModel <- modelunifprior()
 
 #Alternative model space prior: 0.5 prior prob for including any covariate
-priorDelta <- modelbinomprior(p=0.5)
+priorModel <- modelbinomprior(p=0.5)
 
 #Alternative: Beta-Binomial prior for model space
-priorDelta <- modelbbprior()
+priorModel <- modelbbprior()
 
 #Model selection
 fit1 <- modelSelection(y ~ ., data=df, 
-priorCoef=priorCoef, priorDelta=priorDelta)
+priorCoef=priorCoef, priorModel=priorModel)
 
 coef(fit1) #BMA estimates, 95% intervals, marginal post prob
 

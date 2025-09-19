@@ -1,3 +1,4 @@
 VERSION 1.0.4
 - Added check that x cannot contain NAs in createDesign
 - Added bestAIC_fast, bestBIC_fast, bestEBIC_fast, bestIC_fast
+- Changed name of parameter priorDelta to priorModel throughout

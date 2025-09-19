@@ -81,7 +81,7 @@ setMethod("postProb", signature(object='localtest'), function(object, nmax, meth
 # - regionbounds: list with region bounds defined by the local testing knots at each resolution level
 # - Sigma: input parameter
 
-localnulltest= function(y, x, z, x.adjust, localgridsize, localgrid, nbaseknots=20, nlocalknots=c(5,10,15), localknots, basedegree=3, cutdegree=0, usecutbasis=TRUE, priorCoef=normalidprior(), priorGroup=priorCoef, priorDelta=modelbbprior(), mc.cores=min(4,length(nlocalknots)), return.mcmc=FALSE, verbose=FALSE, ...) {
+localnulltest= function(y, x, z, x.adjust, localgridsize, localgrid, nbaseknots=20, nlocalknots=c(5,10,15), localknots, basedegree=3, cutdegree=0, usecutbasis=TRUE, priorCoef=normalidprior(), priorGroup=priorCoef, priorModel=modelbbprior(), mc.cores=min(4,length(nlocalknots)), return.mcmc=FALSE, verbose=FALSE, ...) {
     #Check & format input arguments
     check= checkargs_localnulltest(y=y,x=x,x.adjust=x.adjust,z=z,localknots=localknots)
     y= check$y; x= check$x; z= check$z; x.adjust= check$x.adjust
@@ -94,12 +94,12 @@ localnulltest= function(y, x, z, x.adjust, localgridsize, localgrid, nbaseknots=
         if (!is.list(localknots)) localknots= list(localknots)
     }
     #Perform local null tests
-    localnulltest_core(y=y, x=x, z=z, x.adjust=x.adjust, localgridsize=localgridsize, localgrid=localgrid, nbaseknots=nbaseknots, nlocalknots=nlocalknots, localknots=localknots, basedegree=basedegree, cutdegree=cutdegree, usecutbasis=usecutbasis, priorCoef=priorCoef, priorGroup=priorGroup, priorDelta=priorDelta, mc.cores=mc.cores, return.mcmc=return.mcmc, verbose=verbose, ...)
+    localnulltest_core(y=y, x=x, z=z, x.adjust=x.adjust, localgridsize=localgridsize, localgrid=localgrid, nbaseknots=nbaseknots, nlocalknots=nlocalknots, localknots=localknots, basedegree=basedegree, cutdegree=cutdegree, usecutbasis=usecutbasis, priorCoef=priorCoef, priorGroup=priorGroup, priorModel=priorModel, mc.cores=mc.cores, return.mcmc=return.mcmc, verbose=verbose, ...)
 }
 
 
 #Same as localnulltest, but for data observed on a regular grid (e.g. time series, functional data analysis) where errors may be correlated
-localnulltest_fda= function(y, x, z, x.adjust, function_id, Sigma='AR/MA', localgridsize, localgrid, nbaseknots=20, nlocalknots=c(5,10,15), localknots, basedegree=3, cutdegree=0, usecutbasis=TRUE, priorCoef=momprior(), priorGroup=groupmomprior(), priorDelta=modelbbprior(), mc.cores=min(4,length(nlocalknots)), return.mcmc=FALSE, verbose=FALSE, ...) {
+localnulltest_fda= function(y, x, z, x.adjust, function_id, Sigma='AR/MA', localgridsize, localgrid, nbaseknots=20, nlocalknots=c(5,10,15), localknots, basedegree=3, cutdegree=0, usecutbasis=TRUE, priorCoef=momprior(), priorGroup=groupmomprior(), priorModel=modelbbprior(), mc.cores=min(4,length(nlocalknots)), return.mcmc=FALSE, verbose=FALSE, ...) {
     #Check & format input requirements
     check= checkargs_localnulltest(y=y,x=x,z=z,x.adjust=x.adjust,function_id=function_id,localknots=localknots)
     y= check$y; x= check$x; z= check$z; x.adjust= check$x.adjust
@@ -112,7 +112,7 @@ localnulltest_fda= function(y, x, z, x.adjust, function_id, Sigma='AR/MA', local
         if (!is.list(localknots)) localknots= list(localknots)
     }
     #Perform local null tests
-    localnulltest_core(y=y, x=x, z=z, x.adjust=x.adjust, function_id=function_id, Sigma=Sigma, localgridsize=localgridsize, localgrid=localgrid, nbaseknots=nbaseknots, nlocalknots=nlocalknots, localknots=localknots, basedegree=basedegree, cutdegree=cutdegree, usecutbasis=usecutbasis, priorCoef=priorCoef, priorGroup=priorGroup, priorDelta=priorDelta, mc.cores=mc.cores, return.mcmc=return.mcmc, verbose=verbose, ...)
+    localnulltest_core(y=y, x=x, z=z, x.adjust=x.adjust, function_id=function_id, Sigma=Sigma, localgridsize=localgridsize, localgrid=localgrid, nbaseknots=nbaseknots, nlocalknots=nlocalknots, localknots=localknots, basedegree=basedegree, cutdegree=cutdegree, usecutbasis=usecutbasis, priorCoef=priorCoef, priorGroup=priorGroup, priorModel=priorModel, mc.cores=mc.cores, return.mcmc=return.mcmc, verbose=verbose, ...)
 }
 
 #Check input arguments to localnulltest
@@ -151,23 +151,23 @@ checkargs_localnulltest= function(y, x, z, x.adjust, function_id, localknots) {
 
 #Core function to run local null tests at multiple resolutions.
 # It calls localnulltest_givenknots (for iid errors) or localnulltest_fda_givenknots (for dependent errors observed on regular grids)
-localnulltest_core= function(y, x, z, x.adjust, function_id, Sigma, localgridsize, localgrid, nbaseknots=20, nlocalknots=c(5,10,15), localknots, basedegree=3, cutdegree=0, usecutbasis=TRUE, priorCoef=normalidprior(), priorGroup=priorCoef, priorDelta=modelbbprior(), mc.cores=min(4,length(nlocalknots)), return.mcmc=FALSE, verbose=FALSE, ...) {
+localnulltest_core= function(y, x, z, x.adjust, function_id, Sigma, localgridsize, localgrid, nbaseknots=20, nlocalknots=c(5,10,15), localknots, basedegree=3, cutdegree=0, usecutbasis=TRUE, priorCoef=normalidprior(), priorGroup=priorCoef, priorModel=modelbbprior(), mc.cores=min(4,length(nlocalknots)), return.mcmc=FALSE, verbose=FALSE, ...) {
     #Define function to be run at each resolution level
     if (is.null(localknots)) {
         nresolutions= length(nlocalknots)
         if (missing(Sigma)) {
-            foo= function(i) { localnulltest_givenknots(y=y, x=x, z=z, x.adjust=x.adjust, localgrid=localgrid, nbaseknots=nbaseknots, nlocalknots=nlocalknots[i], basedegree=basedegree, cutdegree=cutdegree, usecutbasis=usecutbasis, priorCoef=priorCoef, priorGroup=priorGroup, priorDelta=priorDelta, verbose=verbose, ...) }
+            foo= function(i) { localnulltest_givenknots(y=y, x=x, z=z, x.adjust=x.adjust, localgrid=localgrid, nbaseknots=nbaseknots, nlocalknots=nlocalknots[i], basedegree=basedegree, cutdegree=cutdegree, usecutbasis=usecutbasis, priorCoef=priorCoef, priorGroup=priorGroup, priorModel=priorModel, verbose=verbose, ...) }
             Sigma= "identity"
         } else {
-            foo= function(i) { localnulltest_fda_givenknots(y=y, x=x, z=z, x.adjust=x.adjust, function_id=function_id, Sigma=Sigma, localgrid=localgrid, nbaseknots=nbaseknots, nlocalknots=nlocalknots[i], basedegree=basedegree, cutdegree=cutdegree, usecutbasis=usecutbasis, priorCoef=priorCoef, priorGroup=priorGroup, priorDelta=priorDelta, verbose=verbose, ...) }
+            foo= function(i) { localnulltest_fda_givenknots(y=y, x=x, z=z, x.adjust=x.adjust, function_id=function_id, Sigma=Sigma, localgrid=localgrid, nbaseknots=nbaseknots, nlocalknots=nlocalknots[i], basedegree=basedegree, cutdegree=cutdegree, usecutbasis=usecutbasis, priorCoef=priorCoef, priorGroup=priorGroup, priorModel=priorModel, verbose=verbose, ...) }
         }
     } else {
         nresolutions= length(localknots)
         if (missing(Sigma)) {
-            foo= function(i) { localnulltest_givenknots(y=y, x=x, z=z, x.adjust=x.adjust, localgrid=localgrid, nbaseknots=nbaseknots, localknots=localknots[[i]], basedegree=basedegree, cutdegree=cutdegree, usecutbasis=usecutbasis, priorCoef=priorCoef, priorGroup=priorGroup, priorDelta=priorDelta, verbose=verbose, ...) }
+            foo= function(i) { localnulltest_givenknots(y=y, x=x, z=z, x.adjust=x.adjust, localgrid=localgrid, nbaseknots=nbaseknots, localknots=localknots[[i]], basedegree=basedegree, cutdegree=cutdegree, usecutbasis=usecutbasis, priorCoef=priorCoef, priorGroup=priorGroup, priorModel=priorModel, verbose=verbose, ...) }
             Sigma= "identity"
         } else {
-            foo= function(i) { localnulltest_fda_givenknots(y=y, x=x, z=z, x.adjust=x.adjust, function_id=function_id, Sigma=Sigma, localgrid=localgrid, nbaseknots=nbaseknots, localknots=localknots[[i]], basedegree=basedegree, cutdegree=cutdegree, usecutbasis=usecutbasis, priorCoef=priorCoef, priorGroup=priorGroup, priorDelta=priorDelta, verbose=verbose, ...) }
+            foo= function(i) { localnulltest_fda_givenknots(y=y, x=x, z=z, x.adjust=x.adjust, function_id=function_id, Sigma=Sigma, localgrid=localgrid, nbaseknots=nbaseknots, localknots=localknots[[i]], basedegree=basedegree, cutdegree=cutdegree, usecutbasis=usecutbasis, priorCoef=priorCoef, priorGroup=priorGroup, priorModel=priorModel, verbose=verbose, ...) }
         }
     }
     #Run analysis for each resolution level
@@ -217,7 +217,7 @@ localnulltest_core= function(y, x, z, x.adjust, function_id, Sigma, localgridsiz
 
 
 
-localnulltest_givenknots= function(y, x, z, x.adjust, localgridsize, localgrid, nbaseknots=20, nlocalknots=10, localknots, basedegree=3, cutdegree=0, usecutbasis=TRUE, priorCoef=normalidprior(), priorGroup=priorCoef, priorDelta=modelbbprior(), verbose=FALSE, ...) {
+localnulltest_givenknots= function(y, x, z, x.adjust, localgridsize, localgrid, nbaseknots=20, nlocalknots=10, localknots, basedegree=3, cutdegree=0, usecutbasis=TRUE, priorCoef=normalidprior(), priorGroup=priorCoef, priorModel=modelbbprior(), verbose=FALSE, ...) {
     #Check & format input requirements
     if (missing(localknots)) {
         if (length(nlocalknots)>1) stop("nlocalknots must have length 1. Consider using localnulltest")
@@ -242,7 +242,7 @@ localnulltest_givenknots= function(y, x, z, x.adjust, localgridsize, localgrid, 
     } else {
         groups= des$vargroupsn
     }
-    ms= modelSelection(y, x=w, groups=groups, priorCoef=priorCoef, priorGroup=priorGroup, priorDelta=priorDelta, neighbours=neighbours, verbose=verbose, ...)        
+    ms= modelSelection(y, x=w, groups=groups, priorCoef=priorCoef, priorGroup=priorGroup, priorModel=priorModel, neighbours=neighbours, verbose=verbose, ...)        
     pp= postProb(ms)
     #Obtain posterior probability for each region defined by the knots. Store in regionid, ppregion
     modelid= modelid2logical(pp$modelid, nvars=ncol(ms$xstd))
@@ -280,7 +280,7 @@ localnulltest_givenknots= function(y, x, z, x.adjust, localgridsize, localgrid, 
 
 
 
-localnulltest_fda_givenknots= function(y, x, z, x.adjust, function_id, Sigma='AR/MA', localgridsize, localgrid, nbaseknots=20, nlocalknots=10, localknots, basedegree=3, cutdegree=0, usecutbasis=TRUE, priorCoef=momprior(), priorGroup=groupmomprior(), priorDelta=modelbbprior(), verbose=FALSE, ...) {
+localnulltest_fda_givenknots= function(y, x, z, x.adjust, function_id, Sigma='AR/MA', localgridsize, localgrid, nbaseknots=20, nlocalknots=10, localknots, basedegree=3, cutdegree=0, usecutbasis=TRUE, priorCoef=momprior(), priorGroup=groupmomprior(), priorModel=modelbbprior(), verbose=FALSE, ...) {
     #Check & format input requirements
     if (missing(localknots)) {
         if (length(nlocalknots)>1) stop("nlocalknots must have length 1. Consider using localnulltest_fda")
@@ -316,7 +316,7 @@ localnulltest_fda_givenknots= function(y, x, z, x.adjust, function_id, Sigma='AR
     } else {
         groups= des$vargroupsn
     }
-    ms= modelSelection(y=ytilde, x=wtilde, groups=groups, priorCoef=priorCoef, priorGroup=priorGroup, priorDelta=priorDelta, neighbours=neighbours, verbose=verbose, ...)
+    ms= modelSelection(y=ytilde, x=wtilde, groups=groups, priorCoef=priorCoef, priorGroup=priorGroup, priorModel=priorModel, neighbours=neighbours, verbose=verbose, ...)
     pp= postProb(ms)
     #Obtain posterior probability for each region defined by the knots. Store in regionid, ppregion
     modelid= modelid2logical(pp$modelid, nvars=ncol(ms$xstd))

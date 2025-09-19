@@ -428,7 +428,7 @@ exposureCoef <- function(Di, A, familyD, typeofvar = rep('numeric',ncol(A)), add
         if (familyD[i] != 'normal') stop("The generalized inverse method cannot be applied when familyD != 'normal'")
         betad[, i] <- as.matrix(pracma::pinv(t(A) %*% A) %*% t(A) %*% b)[-exc] 
       } else if (mod1 %in% c('bvs', 'bma', 'bms')) {
-        m1.fit <- modelSelection(b, A, family=familyD[i], priorCoef = priorCoef, priorVar = igprior(0.01,0.01), priorDelta = modelbbprior(1,1),
+        m1.fit <- modelSelection(b, A, family=familyD[i], priorCoef = priorCoef, priorVar = igprior(0.01,0.01), priorModel = modelbbprior(1,1),
           niter = Rinit, verbose = FALSE)
         betad[,i] <- coef(m1.fit)[1:nrow(betad),1]
         #post.th <- colMeans(rnlp(msfit = m1.fit, priorCoef = priorCoef, niter = 1e4))
@@ -557,13 +557,13 @@ model.pprobs.cil <- function(y, D, X, I = NULL, family = 'normal', familyD = 'no
       isct <- apply(Zdes, 2, var) == 0
       includevars[isct] <- TRUE #always include the intercept (so it doesn't affect EB/EP estimates)
       Dvars <- 2:(ncol(D)+1) #columns in Z corresponding to D (1st column is the intercept)
-      bvs.fit0 <- ms(f, data=data, priorCoef = priorCoef, priorVar = igp, priorDelta = ufp, niter = Rinit, verbose = verbose, center = center, scale = scale, includevars = includevars)
+      bvs.fit0 <- ms(f, data=data, priorCoef = priorCoef, priorVar = igp, priorModel = ufp, niter = Rinit, verbose = verbose, center = center, scale = scale, includevars = includevars)
     } else {
         p <- ncol(Z) - ncol(Di)
         isct <- apply(Z, 2, var) == 0
         includevars[isct] <- TRUE #always include the intercept (so it doesn't affect EB/EP estimates)
         Dvars <- 1:ncol(D)  #columns in Z corresponding to D
-        bvs.fit0 <- ms(y, Z, priorCoef = priorCoef, priorVar = igp, priorDelta = ufp, niter = Rinit, verbose = verbose, center = center, scale = scale, includevars = includevars)
+        bvs.fit0 <- ms(y, Z, priorCoef = priorCoef, priorVar = igp, priorModel = ufp, niter = Rinit, verbose = verbose, center = center, scale = scale, includevars = includevars)
     }
   }
   # Posterior model probabilities
@@ -618,9 +618,9 @@ model.pprobs.cil <- function(y, D, X, I = NULL, family = 'normal', familyD = 'no
     auxmp <- modelbinomprior(p = auxprpr)#modelSelection::modelbinomprior(p = auxprpr)
 
     if (is.data.frame(Z)) {
-      update.fit <- ms(f, data=data, priorCoef=priorCoef, priorVar=igp, priorDelta=auxmp, niter=round(R/2), verbose=verbose, center=center, scale=scale, includevars=includevars)
+      update.fit <- ms(f, data=data, priorCoef=priorCoef, priorVar=igp, priorModel=auxmp, niter=round(R/2), verbose=verbose, center=center, scale=scale, includevars=includevars)
     } else {
-      update.fit <- ms(y, Z, priorCoef = priorCoef, priorVar = igp, priorDelta = auxmp, niter = round(R/2), verbose = verbose, center = center, scale = scale, includevars = includevars)
+      update.fit <- ms(y, Z, priorCoef = priorCoef, priorVar = igp, priorModel = auxmp, niter = round(R/2), verbose = verbose, center = center, scale = scale, includevars = includevars)
     }
 
     # Append model set
@@ -674,13 +674,13 @@ model.pprobs.cil <- function(y, D, X, I = NULL, family = 'normal', familyD = 'no
   nbp <- modelbinomprior(p = pg1cth)#modelSelection::modelbinomprior(p = pg1cth)
  
   # New model search
-  #new.fit <- ms(y, Z, priorCoef = priorCoef, priorVar = igp, priorDelta = nbp, niter = R, verbose = verbose, center = center, scale = scale, includevars = includevars)
+  #new.fit <- ms(y, Z, priorCoef = priorCoef, priorVar = igp, priorModel = nbp, niter = R, verbose = verbose, center = center, scale = scale, includevars = includevars)
   if (verbose) message("\n FINAL FIT UNDER ESTIMATED ASYMMETRIC BERNOULLI PRIOR \n\n")
   if (is.data.frame(Z)) {
-    new.fit <- ms(f, data=data, priorCoef = priorCoef, priorVar = igp, priorDelta = nbp, niter = R, verbose = verbose, center = center, scale = scale, includevars = includevars)
+    new.fit <- ms(f, data=data, priorCoef = priorCoef, priorVar = igp, priorModel = nbp, niter = R, verbose = verbose, center = center, scale = scale, includevars = includevars)
     treatidx <- Dvars
   } else {
-    new.fit <- ms(y, Z, priorCoef = priorCoef, priorVar = igp, priorDelta = nbp, niter = R, verbose = verbose, center = center, scale = scale, includevars = includevars)
+    new.fit <- ms(y, Z, priorCoef = priorCoef, priorVar = igp, priorModel = nbp, niter = R, verbose = verbose, center = center, scale = scale, includevars = includevars)
     treatidx <- Dvars + ifelse(all(apply(Z,2,'sd') > 0), 1, 0) #if Z has no intercept, coef(new.fit) will add one automatically
   }
 

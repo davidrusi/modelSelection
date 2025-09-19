@@ -5,12 +5,12 @@
 ##########################################################################################
 
 
-postModeOrtho <- function(y, x, priorCoef=momprior(tau=0.348), priorDelta=modelbbprior(1,1),priorVar=igprior(0.01,0.01), bma=FALSE, includeModels, maxvars=100) {
+postModeOrtho <- function(y, x, priorCoef=momprior(tau=0.348), priorModel=modelbbprior(1,1),priorVar=igprior(0.01,0.01), bma=FALSE, includeModels, maxvars=100) {
     #Find posterior mode for linear regression under orthogonal X'X
     # - y: outcome
     # - x: predictors
     # - priorCoef: prior on coefficients
-    # - priorDelta: prior on model space
+    # - priorModel: prior on model space
     # - priorVar: prior on residual variance
     # - bma: set to TRUE to obtain Bayesian model averaging parameter estimates
     # - includeModels: list of models that should always be included when computing posterior model probabilities. Each element should be a vector z where x[,z] selects the required variables
@@ -20,20 +20,20 @@ postModeOrtho <- function(y, x, priorCoef=momprior(tau=0.348), priorDelta=modelb
     # -
     integrateMethod <- 'AQ'; exactpp <- TRUE #exactpp=FALSE means we only find posterior mode (for Zellner's prior, for pMOM this doesn't work)
     n <- length(y); p <- ncol(x)
-    if (priorDelta@priorDistr=='binomial' & ('p' %in% names(priorDelta@priorPars))) {
-        rho <- priorDelta@priorPars[['p']]
+    if (priorModel@priorDistr=='binomial' & ('p' %in% names(priorModel@priorPars))) {
+        rho <- priorModel@priorPars[['p']]
         if (length(rho)>1) stop("postModeOrtho not implemented for vector p in modelbinomprior")
         priorModel <- function(nvar) nvar*log(rho) + (p-nvar)*log(1-rho)
         #priorModel <- function(nvar) dbinom(nvar, size=ncol(x),prob=rho,log=TRUE)
-    } else if (priorDelta@priorDistr=='binomial' & !('p' %in% names(priorDelta@priorPars))) {
-        alpha=priorDelta@priorPars['alpha.p']; beta=priorDelta@priorPars['beta.p']
+    } else if (priorModel@priorDistr=='binomial' & !('p' %in% names(priorModel@priorPars))) {
+        alpha=priorModel@priorPars['alpha.p']; beta=priorModel@priorPars['beta.p']
         priorModel <- function(nvar) lbeta(nvar + alpha, p - nvar + beta) - lbeta(alpha, beta)
         rho <- alpha/(alpha+beta)
-    } else if (priorDelta@priorDistr=='uniform') {
+    } else if (priorModel@priorDistr=='uniform') {
         priorModel <- function(nvar) -p*log(2)
         rho <- 1/2
-    } else if (priorDelta@priorDistr=='complexity') {
-        priorc= priorDelta@priorPars['c']
+    } else if (priorModel@priorDistr=='complexity') {
+        priorc= priorModel@priorPars['c']
         priornorm= log(1-1/p^(priorc*(p+1))) - log(1-1/p^priorc)
         priorModel <- function(nvar) lbeta(nvar + 1, p - nvar + 1) - (priorc*nvar)*log(p) - priornorm
         lseq= 1:(p+1)
@@ -271,13 +271,13 @@ postModeOrtho <- function(y, x, priorCoef=momprior(tau=0.348), priorDelta=modelb
 
 
 
-postModeBlockDiag <- function(y, x, blocks, priorCoef=zellnerprior(tau=nrow(x)), priorDelta=modelbinomprior(p=1/ncol(x)), priorVar=igprior(0.01,0.01), bma=FALSE, maxvars=100, momcoef) {
+postModeBlockDiag <- function(y, x, blocks, priorCoef=zellnerprior(tau=nrow(x)), priorModel=modelbinomprior(p=1/ncol(x)), priorVar=igprior(0.01,0.01), bma=FALSE, maxvars=100, momcoef) {
     #Find posterior mode for linear regression under block-diagonal X'X
     # - y: outcome
     # - x: predictors
     # - blocks: factor or integer of length ncol(x) indicating the block that each column in x belongs to
     # - priorCoef: prior on coefficients
-    # - priorDelta: prior on model space
+    # - priorModel: prior on model space
     # - priorVar: prior on residual variance
     # - bma: set to TRUE to obtain Bayesian model averaging parameter estimates
     # - integrateMethod: if exactpp=TRUE this is the numerical integration method to obtain logpy. Set to 'CSR' to compound Simpson's rule based on an adaptive grid defined by enumerating highly probable models, to 'AQ' to use adaptive quadrature as implemented in R function 'integrate'
@@ -293,17 +293,17 @@ postModeBlockDiag <- function(y, x, blocks, priorCoef=zellnerprior(tau=nrow(x)),
     blocksize <- table(blocks)
     nn <- 1:ncol(x)
     varidx <- lapply(as.integer(names(blocksize)), function(k) nn[blocks==k])
-    if (priorDelta@priorDistr=='binomial' & ('p' %in% names(priorDelta@priorPars))) {
-        rho <- priorDelta@priorPars[['p']]
+    if (priorModel@priorDistr=='binomial' & ('p' %in% names(priorModel@priorPars))) {
+        rho <- priorModel@priorPars[['p']]
         if (length(rho)>1) stop("postModeBlockDiag not implemented for vector p in modelbinomprior")
-        if (any(rho<0) | any(rho>1)) stop("Specified prior inclusion probability outside [0,1]. Check priorDelta")
+        if (any(rho<0) | any(rho>1)) stop("Specified prior inclusion probability outside [0,1]. Check priorModel")
         priorModel <- function(nvar) nvar*log(rho) + (p-nvar)*log(1-rho)
         priorModelBlock <- function(nvar,blocksize) nvar*log(rho) + (blocksize-nvar)*log(1-rho)
-    } else if (priorDelta@priorDistr=='binomial' & !('p' %in% names(priorDelta@priorPars))) {
+    } else if (priorModel@priorDistr=='binomial' & !('p' %in% names(priorModel@priorPars))) {
         stop("Beta-Binomial prior not currently implemented")
-        #alpha=priorDelta@priorPars['alpha.p']; beta=priorDelta@priorPars['beta.p']
+        #alpha=priorModel@priorPars['alpha.p']; beta=priorModel@priorPars['beta.p']
         #priorModel <- function(nvar) lbeta(nvar + alpha, p - nvar + beta) - lbeta(alpha, beta)
-    } else if (priorDelta@priorDistr=='uniform') {
+    } else if (priorModel@priorDistr=='uniform') {
         rho <- 0.5
         priorModel <- function(nvar) rep(-p*log(2),length(nvar))
         priorModelBlock <- function(nvar,blocksize) rep(-blocksize*log(2),length(nvar))

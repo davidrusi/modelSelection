@@ -68,12 +68,12 @@ modelSelection_eBayes= function(Z, wini, niter.mcmc= 5000, niter.mstep= 1000, ni
     if (verbose) message("Initializing hyper-parameter estimates... ")
     if (missing(wini)) {
         # Obtain posterior inclusion prob under Beta-Binomial(1,1) model prior
-        ms= modelSelection(priorDelta=modelbbprior(), niter=niter.mstep, verbose=FALSE, ...)
+        ms= modelSelection(priorModel=modelbbprior(), niter=niter.mstep, verbose=FALSE, ...)
     } else {
         # Obtain posterior inclusion prob under Bernoulli prior for given wini
         priorprob= 1 / (1 + exp(- Z %*% matrix(wini,ncol=1)))
-        priorDelta= modelbinomprior(priorprob)
-        ms= modelSelection(priorDelta=priorDelta, niter=niter.mstep, verbose=FALSE, ...)
+        priorModel= modelbinomprior(priorprob)
+        ms= modelSelection(priorModel=priorModel, niter=niter.mstep, verbose=FALSE, ...)
     }
     # Set initial estimate using solution from full-rank/clustering case 
     wini= eBayes_mstep_init(Z=Z, postprob=ms$margpp, priorvar.w=priorvar.w)
@@ -89,8 +89,8 @@ modelSelection_eBayes= function(Z, wini, niter.mcmc= 5000, niter.mstep= 1000, ni
     while (!found) {
         # E-step: find posterior probabilities for current w
         priorprob= 1 / (1 + exp(- Z %*% w))
-        priorDelta= modelbinomprior(priorprob)
-        ms= modelSelection(priorDelta=priorDelta, niter=niter.mstep, verbose=FALSE, ...)
+        priorModel= modelbinomprior(priorprob)
+        ms= modelSelection(priorModel=priorModel, niter=niter.mstep, verbose=FALSE, ...)
         # M-step
         if (wini$fullrankcase) {
             wnew= eBayes_mstep_fullrank(Z=Z, Uinv=wini$Uinv, postprob=ms$margpp, wcur=w, priorvar.w=priorvar.w)
@@ -118,8 +118,8 @@ modelSelection_eBayes= function(Z, wini, niter.mcmc= 5000, niter.mstep= 1000, ni
     if (verbose) message("Done. \n","Final MCMC with best hyper-parameter value... ")
     w= wbest
     priorprob= 1 / (1 + exp(- Z %*% w))
-    priorDelta= modelbinomprior(priorprob)
-    ms= modelSelection(priorDelta=priorDelta, niter=niter.mcmc, verbose=FALSE, ...)
+    priorModel= modelbinomprior(priorprob)
+    ms= modelSelection(priorModel=priorModel, niter=niter.mcmc, verbose=FALSE, ...)
     ms$eBayes_hyperpar= w
     ms$Z= Z
     if (verbose) message("Done\n")

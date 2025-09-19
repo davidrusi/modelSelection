@@ -595,7 +595,7 @@ pt2margFun set_marginalFunction(lmObject *lm) {
       }
     }
   } else if ((family)==2) { //Two-piece Normal errors
-    if (priorcode >= 10) Rf_error("Group priors not implemented for Two-piece Normal errors");
+    if (priorcode >= 10) Rf_error("This prior/info criterion is not implemented for Two-piece Normal errors");
     if (priorcode==0) {
       ans= pmomMargSkewNormU;
     } else if (priorcode==1) {
@@ -606,7 +606,7 @@ pt2margFun set_marginalFunction(lmObject *lm) {
       Rf_error("Zellner prior with two-piece Normal errors not currently implemented");
     }
   } else if ((family)==3) { //Laplace errors
-    if (priorcode >= 10) Rf_error("Group priors not implemented for Laplace errors");
+    if (priorcode >= 10) Rf_error("This prior/info criterion is not implemented for Laplace errors");
     if (priorcode==0) {
       ans= pmomMargLaplU;
     } else if (priorcode==1) {
@@ -617,7 +617,7 @@ pt2margFun set_marginalFunction(lmObject *lm) {
       Rf_error("Zellner prior with Laplace errors not currently implemented");
     }
   } else if ((family)==4) { //Asymmetric Laplace errors
-    if (priorcode >= 10) Rf_error("Group priors not implemented for asymmetric Laplace errors");
+    if (priorcode >= 10) Rf_error("This prior/info criterion is not implemented for asymmetric Laplace errors");
     if (priorcode==0) {
       ans= pmomMargAlaplU;
     } else if (priorcode==1) {
@@ -628,7 +628,7 @@ pt2margFun set_marginalFunction(lmObject *lm) {
       Rf_error("Zellner prior with asymmetric Laplace errors not currently implemented");
     }
   } else if ((family)==0) { //Normal + Two-piece Normal + Laplace + Two-piece Laplace errors
-    if (priorcode >= 10) Rf_error("Group priors with family='auto' not currently implemented");
+    if (priorcode >= 10) Rf_error("This prior/info criterion is not implemented for family='auto'");
     if (priorcode==0) {
       ans= pmomMargTP;
     } else if (priorcode==1) {
@@ -1926,7 +1926,7 @@ void modelSelectionGibbs(int *postSample, double *margpp, int *postMode, double 
 */
 
 
-//greedyVarSelC: greedy search for posterior mode in variable selection.
+//greedyVarSelC: greedy coordinate descent algorithm search for posterior mode in variable selection.
 //               Similar to Gibbs sampling, except that deterministic updates are made iff there is an increase in post model prob
 //               The scheme proceeds until no variable is included/excluded or niter iterations are reached
 // Input arguments: same as in modelSelectionC.
@@ -2019,7 +2019,7 @@ void greedyVarSelC(int *postMode, double *postModeProb, int *prDelta, int *prCon
   for (j=1, firstingroup[0]=0; j<ngroups; j++) { firstingroup[j]= firstingroup[j-1] + nvaringroup[j-1]; }
 
   //Initialize
-  if (*verbose==1) Rprintf(" Greedy searching posterior mode... ");
+  if (*verbose==1) Rprintf(" Running coordinate descent algorithm to find best model... ");
   ivector_to_spmat(deltaini, ndeltaini, sel);
   *postModeProb= integrals->getJoint(sel,lm,nullptr);
   //*postModeProb= marginalFunction(sel,lm,nullptr,nullptr,nullptr,nullptr) + priorFunction(sel,lm);

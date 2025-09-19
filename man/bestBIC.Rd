@@ -3,6 +3,10 @@
 \alias{bestBIC}
 \alias{bestEBIC}
 \alias{bestIC}
+\alias{bestAIC_fast}
+\alias{bestBIC_fast}
+\alias{bestEBIC_fast}
+\alias{bestIC_fast}
 
 \title{
 Model with best AIC, BIC, EBIC or other general information criteria (getIC)
@@ -14,11 +18,19 @@ Model with best AIC, BIC, EBIC or other general information criteria (getIC)
 \usage{
   bestAIC(...)
 
+  bestAIC_fast(...)
+
   bestBIC(...)
+
+  bestBIC_fast(...)
 
   bestEBIC(...)
 
+  bestEBIC_fast(...)
+
   bestIC(..., penalty)
+
+  bestIC_fast(..., penalty)
 }
 \arguments{
   \item{...}{Arguments passed on to \code{modelSelection}. The first and
@@ -32,8 +44,16 @@ Model with best AIC, BIC, EBIC or other general information criteria (getIC)
 }
 \details{
 
-  When there are too many models to be enumerated, these are searched
-  with MCMC as discussed in function \code{modelSelection}.
+  \code{bestAIC}, \code{bestBIC}, \code{bestEBIC}, \code{bestIC} perform
+  full model enumeration when possible and otherwise resort to MCMC to
+  explore the models, as discussed in function \code{modelSelection}.
+  \code{bestAIC_fast}, \code{bestBIC_fast}, \code{bestEBIC_fast},
+  \code{bestIC_fast} use a faster algorithm. For
+  Gaussian and binary outcomes it uses function \code{L0Learn.fit} from
+  package \code{L0Learn} (Hazimeh et al, 2023), which combines
+  coordinate descent with local combinatorial search. For any other
+  outcome type it uses only coordinte descent.
+  
   \code{bestBIC} and the other functions codumented here take similar
   arguments to those of \code{modelSelection}, the primary difference is
   that no priors on models or parameters are needed.
@@ -72,7 +92,11 @@ Model with best AIC, BIC, EBIC or other general information criteria (getIC)
 David Rossell
 }
 \seealso{
-\code{\link{modelSelection}} to perform model selection
+\code{\link{modelSelection}} to perform Bayesian model selection, and
+for a description of the arguments that should be passed in \code{...}
+}
+\references{
+H. Hazimeh, R. Mazumder, T. Nonet. L0learn: A scalable package for sparse learning using l0 regularization. Journal of Machine Learning Research 24.205 (2023): 1-8.
 }
 \examples{
 x <- matrix(rnorm(100*3),nrow=100,ncol=3)

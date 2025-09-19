@@ -28,18 +28,18 @@
 }
 \usage{
 modelSelection(y, x, data, smoothterms, nknots=9,
-groups=1:ncol(x), constraints, center=TRUE, scale=TRUE,
-enumerate, includevars=rep(FALSE,ncol(x)), models,
+groups, constraints, center=TRUE, scale=TRUE,
+enumerate, includevars, models,
 maxvars, niter=5000, thinning=1,
 burnin=round(niter/10), family='normal', priorCoef,
 priorGroup, priorDelta=modelbbprior(1,1),
 priorConstraints,
 priorVar=igprior(.01,.01),
 priorSkew=momprior(tau=0.348),
-neighbours, phi, deltaini=rep(FALSE,ncol(x)),
-initSearch='greedy', method='auto', adj.overdisp='intercept',
+neighbours, phi, deltaini,
+initSearch='CDA', method='auto', adj.overdisp='intercept',
 hess='asymp', optimMethod, optim_maxit, initpar='none', B=10^5,
-XtXprecomp= ifelse(ncol(x)<10^4,TRUE,FALSE), verbose=TRUE)
+XtXprecomp, verbose=TRUE)
 
 modelSelection_eBayes(Z, wini, niter.mcmc= 5000, niter.mstep= 1000,
 niter.eBayes= 20, priorvar.w, verbose=TRUE, ...)
@@ -68,8 +68,9 @@ maxenum=10, verbose=TRUE)
   basis adds knots-4 coefficients for each linear term, we recommend
   setting \code{nknots} to a small/moderate value}
 \item{groups}{If variables in \code{x} such be added/dropped in groups,
-  \code{groups} indicates the group that each variable corresponds to
-  (by default each variable goes in a separate group)}
+  \code{groups} indicates the group that each variable corresponds to.
+  By default \code{groups} is \code{1:ncol(x)}, i.e. 
+  each variable goes into a separate group}
 \item{constraints}{Constraints on the model space. List with length
   equal to the number of groups;
   if group[[i]]=c(j,k) then group i can only be in the model if groups j and k are also in the model}
@@ -81,8 +82,8 @@ maxenum=10, verbose=TRUE)
   groups. If \code{TRUE} all models with up to \code{maxvars} are
   enumerated, else Gibbs sampling is used to explore the model space}
 \item{includevars}{Logical vector of length ncol(x) indicating variables
-that should always be included in the model, i.e. variable selection is
-not performed for these variables}
+that should always be included, i.e. variable selection is
+not performed for these variables. By default \code{includevars} is \code{rep(FALSE,ncol(x))}}
 \item{models}{Optional logical matrix indicating the models to be
   enumerated with rows equal to the number of desired models and columns
 to the number of variables in \code{x}. }
@@ -137,10 +138,10 @@ to the number of variables in \code{x}. }
   unknown and is left missing}
 \item{deltaini}{Logical vector of length \code{ncol(x)} indicating which
   coefficients should be initialized to be non-zero.
-  Defaults to all variables being excluded from the model}
+  Defaults to all being zero, except those indicated by \code{includevars}}
 \item{initSearch}{Algorithm to refine
-  \code{deltaini}. \code{initSearch=='greedy'} uses a greedy Gibbs
-  sampling search. \code{initSearch=='SCAD'} sets \code{deltaini} to the
+  \code{deltaini}. \code{initSearch=='CDA'} uses a coordinate descent
+  algorithm. \code{initSearch=='SCAD'} sets \code{deltaini} to the
   non-zero elements in a SCAD fit with cross-validated regularization
   parameter. \code{initSearch=='none'} leaves \code{deltaini} unmodified}
 \item{method}{Method to compute marginal likelihood.
@@ -182,7 +183,9 @@ to the number of variables in \code{x}. }
   if \code{method=='Laplace'}}
 \item{XtXprecomp}{Set to \code{TRUE} to pre-compute the Gram matrix x'x
   upfront (saves time), to \code{FALSE} to compute and store elements
-  only as needed (saves memory)}
+  only as needed (saves memory). By default
+  \code{XtXprecomp <- ifelse(ncol(x)<10^4,TRUE,FALSE)}}
+
 \item{verbose}{Set \code{verbose==TRUE} to print iteration progress}
 
 \item{blocksize}{Maximum number of variables in a block. Careful, the

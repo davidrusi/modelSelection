@@ -2,7 +2,7 @@
 
 setMethod("show", signature(object='icfit'), function(object) {
   message("icfit object\n\n")
-  message("Model with best ",object$criterion,": ",paste(object$topmodel, sep=' '),"\n\n")
+  message("Model with best ",object$criterion,": ",paste(object$topmodel, collapse=' '),"\n\n")
   message("Use summary(), coef() and predict() to get inference for the top model\n")
   message("Use coef(object$msfit) and predict(object$msfit) to get BMA estimates and predictions\n")
 }
@@ -28,20 +28,20 @@ summary.icfit <- function(object, ...) {
 
 ## FIND THE MODEL ATTAINING THE BEST VALUE OF AN INFORMATION CRITERION
 
-checkargs_IC= function(...) {
+checkargs_IC <- function(...) {
     params= eval(quote(list(...)))
     forbiddenpars= c('priorCoef','priorDelta','center','scale')
     if (any(forbiddenpars %in% names(params))) stop(paste("Arguments",paste(forbiddenpars,collapse=", "),"have set values so they cannot be passed on to modelSelection"))
 }
 
 
-topmodelnames= function(ans) {
+topmodelnames <- function(ans) {
     topvarids= as.numeric(strsplit(ans$models$modelid[1], ',')[[1]])
     ans= list(topvarids= topvarids, varnames= ans$varnames[topvarids])
     return(ans)
 }
 
-family2glm= function(family) {
+family2glm <- function(family) {
     if (family=="normal") {
         ans= gaussian()
     } else if (family=="binomial") {
@@ -54,7 +54,7 @@ family2glm= function(family) {
 
 
 #Extract info criteria from an msfit and return icfit object
-extractmsIC= function(ms, getICfun) {
+extractmsIC <- function(ms, getICfun) {
     ans= vector("list",5)
     names(ans)= c('topmodel','topmodel.fit','models','varnames','msfit')
     ans$models= getICfun(ms)
@@ -74,7 +74,7 @@ extractmsIC= function(ms, getICfun) {
 }
 
 
-bestBIC= function(...) {
+bestBIC <- function(...) {
     checkargs_IC(...)
     ms= modelSelection(..., priorCoef=bic(), priorDelta=modelunifprior(), center=FALSE, scale=FALSE)
     ans= extractmsIC(ms, getBIC)
@@ -82,7 +82,7 @@ bestBIC= function(...) {
     return(ans)
 }
 
-bestAIC= function(...) {
+bestAIC <- function(...) {
     checkargs_IC(...)
     ms= modelSelection(..., priorCoef=aic(), priorDelta=modelunifprior(), center=FALSE, scale=FALSE)
     ans= extractmsIC(ms, getAIC)
@@ -90,7 +90,7 @@ bestAIC= function(...) {
     return(ans)
 }
 
-bestEBIC= function(...) {
+bestEBIC <- function(...) {
     checkargs_IC(...)
     ms= modelSelection(..., priorCoef=bic(), priorDelta=modelbbprior(), center=FALSE, scale=FALSE)
     ans= extractmsIC(ms, getEBIC)
@@ -98,13 +98,62 @@ bestEBIC= function(...) {
     return(ans)
 }
 
-bestIC= function(..., penalty) {
+bestIC <- function(..., penalty) {
     if (missing(penalty)) stop("penalty must be specified. Alternatively consider using bestBIC(), bestEBIC() or bestAIC()")
     checkargs_IC(...)
     ms= modelSelection(..., priorCoef=ic(penalty), priorDelta=modelunifprior(), center=FALSE, scale=FALSE)
     ans= extractmsIC(ms, getIC)
     ans$criterion= paste('GIC (penalty=',penalty,')',collapse='')
     return(ans)
+}
+
+findmodels_fast <- function(y, x, data, smoothterms, nknots=9, groups, constraints, enumerate, includevars, maxvars, niter=5000, family='normal', priorCoef, priorGroup, priorDelta=modelbbprior(1,1), priorConstraints, priorVar=igprior(.01,.01), priorSkew=momprior(tau=0.348), neighbours, phi, deltaini, adj.overdisp='intercept', hess='asymp', optimMethod, optim_maxit, initpar='none', B=10^5, XtXprecomp, verbose=TRUE) {
+  if ((family == "normal") || (family == "binomial")) {
+    loss <- ifelse(family == "normal", "SquaredError", "Logistic")
+    # Build design matrix
+    tmp <- formatInputdata(y=y,x=x,data=data,smoothterms=smoothterms,nknots=nknots,family=family)
+    x <- tmp$x; y <- tmp$y
+    # Call L0Learn
+    if (missing(includevars)) includevars <- rep(FALSE, ncol(x))
+    if (missing(maxvars)) maxvars <- set_ms_maxvars(n=nrow(x), p=ncol(x), priorCoef=bicprior(), family=family, includevars=includevars)
+    fit <- L0Learn.fit(x=x, y=y, penalty="L0", maxSuppSize=maxvars, loss=loss, algorithm="CDPSI")
+    models <- unique(t(as.matrix(coef(fit) != 0)))
+    if (ncol(models) > ncol(x)) models <- models[,-1] #remove intercept
+  } else {
+    fit <- modelSelection(y=y, x=x, data=data, initSearch='CDA', burnin=0, niter=1, center=FALSE, scale=FALSE, smoothterms=smoothterms, nknots=nknots, groups=groups, constraints=constraints, enumerate=enumerate, includevars=includevars, maxvars=maxvars, priorCoef=priorCoef, priorGroup=priorGroup, priorDelta=priorDelta, priorConstraints=priorConstraints, priorVar=priorVar, priorSkew=priorSkew, neighbours=neighbours, phi=phi, deltaini=deltaini, adj.overdisp=adj.overdisp, hess=hess, optimMethod=optimMethod, optim_maxit=optim_maxit, initpar=initpar, XtXprecomp=XtXprecomp, verbose=verbose)
+    models <- matrix(fit$postMode == 1, nrow=1)
+  }
+  return(models)
+}
+
+
+bestBIC_fast <- function(...) {
+  args <- list(...)
+  args$models <- findmodels_fast(..., priorCoef=bic(), priorDelta=modelunifprior())
+  ans <- do.call(bestBIC, args)
+  #ans <- bestEBIC(..., models=models)
+  return(ans)  
+}
+
+bestAIC_fast <- function(...) {
+  args <- list(...)
+  args$models <- findmodels_fast(..., priorCoef=aic(), priorDelta=modelunifprior())
+  ans <- do.call(bestAIC, args)
+  return(ans)  
+}
+
+bestEBIC_fast <- function(...) {
+  args <- list(...)
+  args$models <- findmodels_fast(..., priorCoef=bic(), priorDelta=modelbbprior())
+  ans <- do.call(bestEBIC, args)
+  return(ans)  
+}
+
+bestIC_fast <- function(..., penalty) {
+  args <- list(...)
+  args$models <- findmodels_fast(..., priorCoef=ic(penalty), priorDelta=modelunifprior())
+  ans <- do.call(bestIC, args, penalty)
+  return(ans)  
 }
 
 

@@ -3,6 +3,7 @@
 ###
 
 import(methods, mgcv, stats)
+importFrom(L0Learn, L0Learn.fit)
 importFrom(mclust, mclustBIC)
 importFrom("utils", "combn")
 importFrom(Rcpp, evalCpp)
@@ -34,7 +35,7 @@ export(eprod)
 
 export(modelSelection, modelSelection_eBayes, modelSelectionGGM, cil)
 export(localnulltest, localnulltest_fda, localnulltest_givenknots, localnulltest_fda_givenknots)
-export(bestAIC, bestBIC, bestEBIC, bestIC)
+export(bestAIC, bestBIC, bestEBIC, bestIC, bestEBIC, bestAIC_fast, bestBIC_fast, bestEBIC_fast, bestIC_fast)
 export(bfnormmix)
 
 

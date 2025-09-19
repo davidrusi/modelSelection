@@ -420,9 +420,9 @@ defaultmom= function(outcometype, family, verbose=TRUE) {
 
 
 #### General model selection routines
-modelSelection <- function(y, x, data, smoothterms, nknots=9, groups=1:ncol(x), constraints, center=TRUE, scale=TRUE, enumerate, includevars=rep(FALSE,ncol(x)), models, maxvars, niter=5000, thinning=1, burnin=round(niter/10), family='normal', priorCoef, priorGroup, priorDelta=modelbbprior(1,1), priorConstraints, priorVar=igprior(.01,.01), priorSkew=momprior(tau=0.348), neighbours, phi, deltaini=rep(FALSE,ncol(x)), initSearch='greedy', method='auto', adj.overdisp='intercept', hess='asymp', optimMethod, optim_maxit, initpar='none', B=10^5, XtXprecomp= ifelse(ncol(x)<10^4,TRUE,FALSE), verbose=TRUE) {
+modelSelection <- function(y, x, data, smoothterms, nknots=9, groups, constraints, center=TRUE, scale=TRUE, enumerate, includevars, models, maxvars, niter=5000, thinning=1, burnin=round(niter/10), family='normal', priorCoef, priorGroup, priorDelta=modelbbprior(1,1), priorConstraints, priorVar=igprior(.01,.01), priorSkew=momprior(tau=0.348), neighbours, phi, deltaini, initSearch='CDA', method='auto', adj.overdisp='intercept', hess='asymp', optimMethod, optim_maxit, initpar='none', B=10^5, XtXprecomp, verbose=TRUE) {
 # Input
-# - y: either formula with the regression equation or vector with response variable. If a formula arguments x, groups & constraints are ignored
+# - y: either formula with the regression equation or vector with response variable. If a formula, arguments x, groups & constraints are ignored
 # - x: design matrix with all potential predictors
 # - data: data frame where the variables indicated in y (if it's a formula) and smoothterms can be found
 # - smoothterms: formula indicating variables for which non-linear effects (splines) should be considered
@@ -446,7 +446,7 @@ modelSelection <- function(y, x, data, smoothterms, nknots=9, groups=1:ncol(x), 
 # - neighbours: Only used if priorCoef is an icarplus prior. neighbours is a list with the same length as the design matrix. Its entry j should be a vector indicating the neighbours of j, and have 0 length if j has no neighbours.
 # - phi: residual variance. Typically this is unknown and therefore left missing. If specified argument priorVar is ignored.
 # - deltaini: logical vector of length ncol(x) indicating which coefficients should be initialized to be non-zero. Defaults to all variables being excluded from the model
-# - initSearch: algorithm to refine deltaini. initSearch=='greedy' uses a greedy Gibbs sampling search. initSearch=='SCAD' sets deltaini to the non-zero elements in a SCAD fit with cross-validated regularization parameter. initSearch=='none' leaves deltaini unmodified.
+# - initSearch: algorithm to refine deltaini. initSearch=='CDA' uses a greedy coordinate descent algorithm. initSearch=='SCAD' sets deltaini to the non-zero elements in a SCAD fit with cross-validated regularization parameter. initSearch=='none' leaves deltaini unmodified.
 # - method: method to compute marginal densities. method=='Laplace' for Laplace approx, method=='MC' for Importance Sampling, method=='Hybrid' for Hybrid Laplace-IS (the latter method is only used for piMOM prior with unknown residual variance phi), method='ALA' (former method=='plugin')
 # - adj.overdisp: for method=='ALA' it indicates the over-dispersion adjustment to be made in models where the dispersion parameter is fixed, as in logistic and Poisson regression. adj.overdisp='none' for no adjustment (not recommended, particularly for Poisson models). adj.overdisp='intercept' to estimate over-dispersion from the intercept-only model. ad.overdisp='residuals' from the Pearson residuals of each model (slightly higher computational cost)
 # - hess: only used for asymmetric Laplace errors. When hess=='asymp' the asymptotic hessian is used to compute the Laplace approximation to the marginal likelihood, when hess=='asympDiagAdj' a diagonal adjustment to the asymptotic Hessian is used
@@ -466,6 +466,7 @@ modelSelection <- function(y, x, data, smoothterms, nknots=9, groups=1:ncol(x), 
   tmp <- formatInputdata(y=y,x=x,data=data,smoothterms=smoothterms,nknots=nknots,family=family)
   x <- tmp$x; y <- tmp$y; formula <- tmp$formula;
   splineDegree <- tmp$splineDegree
+  if (missing(groups)) groups <- 1:ncol(x)
   if (!is.null(tmp$groups)) groups <- tmp$groups
   if (length(groups) != ncol(x)) stop(paste("groups has the wrong length. It should have length",ncol(x)))
   hasgroups <- tmp$hasgroups; isgroups <- tmp$isgroups
@@ -475,7 +476,8 @@ modelSelection <- function(y, x, data, smoothterms, nknots=9, groups=1:ncol(x), 
   call <- list(formula=formula, smoothterms= NULL, splineDegree=splineDegree, nknots=nknots)
   if (!missing(smoothterms)) call$smoothterms <- smoothterms
   p= ncol(x); n= length(y)
-      if (is.numeric(includevars)) {
+  if (missing(includevars)) includevars= rep(FALSE,ncol(x))
+  if (is.numeric(includevars)) {
       tmp= rep(FALSE,p)
       if (max(includevars) > p) stop(paste("includevars contains index ",max(includevars)," but the design matrix only has ",p," columns",sep=""))
       tmp[includevars]= TRUE
@@ -538,6 +540,7 @@ modelSelection <- function(y, x, data, smoothterms, nknots=9, groups=1:ncol(x), 
 
   niter <- as.integer(niter); burnin <- as.integer(burnin); thinning <- as.integer(thinning); B <- as.integer(B)
   sumy2 <- as.double(sum(ystd^2)); sumy <- as.double(sum(ystd)); ytX <- as.vector(matrix(ystd,nrow=1) %*% xstd); colsumsx <- as.double(colSums(xstd))
+  if (missing(XtXprecomp)) XtXprecomp <- ifelse(ncol(xstd)<10^4,TRUE,FALSE)
   if (XtXprecomp) {
       XtX= t(xstd) %*% xstd
       hasXtX= as.logical(TRUE)
@@ -570,7 +573,7 @@ modelSelection <- function(y, x, data, smoothterms, nknots=9, groups=1:ncol(x), 
     includevars <- as.integer(includevars)
     if (familyint==0) { postMode <- rep(as.integer(0),p+2) } else { postMode <- rep(as.integer(0),p) }
     postModeProb <- double(1)
-    if (initSearch=='greedy') {
+    if (initSearch=='CDA') {
       niterGreed <- as.integer(100)
       ans= greedyVarSelCI(knownphi,familygreedy,prior,priorgr,niterGreed,ndeltaini,deltaini,includevars,n,p,ystd,uncens,sumy2,sumy,sumlogyfact,xstd,colsumsx,hasXtX,XtX,ytX,method,adj.overdisp,hesstype,optimMethod,optim_maxit,thinit,usethinit,B,alpha,lambda,phi,tau,taugroup,taualpha,fixatanhalpha,r,a,prDelta,prDeltap,parprDeltap,prConstr,prConstrp,parprConstrp,groups,ngroups,nvaringroup,constraints,invconstraints,maxvars,Dmat,as.integer(verbose))
       postMode <- ans[[1]]; postModeProb <- ans[[2]]

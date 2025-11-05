@@ -18,25 +18,31 @@ Model with best AIC, BIC, EBIC or other general information criteria (getIC)
 \usage{
   bestAIC(...)
 
-  bestAIC_fast(...)
+  bestAIC_fast(..., fastmethod="all")
 
   bestBIC(...)
 
-  bestBIC_fast(...)
+  bestBIC_fast(..., fastmethod="all")
 
   bestEBIC(...)
 
-  bestEBIC_fast(...)
+  bestEBIC_fast(..., fastmethod="all")
 
   bestIC(..., penalty)
 
-  bestIC_fast(..., penalty)
+  bestIC_fast(..., penalty, fastmethod="all")
 }
 \arguments{
   \item{...}{Arguments passed on to \code{modelSelection}. The first and
     main argument is a model formula, see the examples}
   \item{penalty}{General information penalty. For example, since the AIC
     penalty is 2, bestIC(...,penalty=2) is the same as bestAIC(...)}
+  \item{fastmethod}{Method used for fast model search. Set "L0Learn" to
+    use the L0Learn package, "L1" to use LASSO (glmnet package) and
+    "CDA" to use coordinate descent. Not all these options may be
+    available for some GLM families (e.g. L0Learn only supports
+    \code{family="normal"} and \code{"binomial"}). The default "all"
+    uses all available methods}
 }
 \value{Object of class \code{icfit}. Use (coef, summary,
   confint, predict) to get inference for the top model,
@@ -47,16 +53,23 @@ Model with best AIC, BIC, EBIC or other general information criteria (getIC)
   \code{bestAIC}, \code{bestBIC}, \code{bestEBIC}, \code{bestIC} perform
   full model enumeration when possible and otherwise resort to MCMC to
   explore the models, as discussed in function \code{modelSelection}.
-  \code{bestAIC_fast}, \code{bestBIC_fast}, \code{bestEBIC_fast},
-  \code{bestIC_fast} use a faster algorithm. For
-  Gaussian and binary outcomes it uses function \code{L0Learn.fit} from
-  package \code{L0Learn} (Hazimeh et al, 2023), which combines
-  coordinate descent with local combinatorial search. For any other
-  outcome type it uses only coordinte descent.
   
-  \code{bestBIC} and the other functions codumented here take similar
-  arguments to those of \code{modelSelection}, the primary difference is
-  that no priors on models or parameters are needed.
+  \code{bestAIC_fast}, \code{bestBIC_fast}, \code{bestEBIC_fast},
+  \code{bestIC_fast} use a faster algorithm. It first identifies
+  a subset of promising models, and then computes the specified
+  criterion for each of them to find the best one within the subset.
+  For Gaussian and binary outcomes it uses function \code{L0Learn.fit} from
+  package \code{L0Learn} (Hazimeh et al, 2023), which combines
+  coordinate descent with local combinatorial search to find good models
+  of each size.
+  L1 returns all the models found in the LASSO regularization path.
+  CDA returns a single model found by coordinate descent,
+  i.e. adding/dropping one covariate at a time to improve the
+  specified criterion (BIC, AIC, ...). 
+  
+  \code{bestBIC} and the other functions documented here take similar
+  arguments to those of \code{modelSelection}, but here no priors
+  on models or parameters are needed.
   
   Let p be the total number of parameters and n the sample size. The BIC of a model k with p_k
   parameters is

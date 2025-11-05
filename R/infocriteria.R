@@ -107,8 +107,18 @@ bestIC <- function(..., penalty) {
     return(ans)
 }
 
-findmodels_fast <- function(y, x, data, smoothterms, nknots=9, groups, constraints, enumerate, includevars, maxvars, niter=5000, family='normal', priorCoef, priorGroup, priorModel=modelbbprior(1,1), priorConstraints, priorVar=igprior(.01,.01), priorSkew=momprior(tau=0.348), neighbours, phi, deltaini, adj.overdisp='intercept', hess='asymp', optimMethod, optim_maxit, initpar='none', B=10^5, XtXprecomp, verbose=TRUE) {
-  if ((family == "normal") || (family == "binomial")) {
+findmodels_fast <- function(y, x, data, smoothterms, nknots=9, groups, constraints, enumerate, includevars, maxvars, niter=5000, family='normal', priorCoef, priorGroup, priorModel=modelbbprior(1,1), priorConstraints, priorVar=igprior(.01,.01), priorSkew=momprior(tau=0.348), neighbours, phi, deltaini, adj.overdisp='intercept', hess='asymp', optimMethod, optim_maxit, initpar='none', B=10^5, XtXprecomp, verbose=TRUE, fastmethod) {
+  if (!fastmethod %in% c("L0Learn","L1","CDA","all")) stop("fastmethod must be 'L0Learn', 'L1', 'CDA' or 'all'")
+  #Determine what model search methods to use
+  L0Learn_available <- ifelse(family %in% c("normal","binomial"), TRUE, FALSE)
+  L1_available <- ifelse(family %in% c("normal","twopiecenormal","laplace","twopiecelaplace","auto","binomial","binomial logit","poisson","poisson log","negbinomial","multinomial","cox","mnormal"), TRUE, FALSE)
+  CDA_available <- ifelse(family %in% c("normal","twopiecenormal","laplace","twopiecelaplace","auto","binomial","binomial logit","poisson","poisson log"), TRUE, FALSE)
+  use_L0Learn <- ifelse((fastmethod %in% c("L0Learn","all")) & L0Learn_available, TRUE, FALSE)
+  use_L1 <- ifelse((fastmethod %in% c("L1","all")) & L1_available, TRUE, FALSE)
+  use_CDA <- ifelse((fastmethod %in% c("CDA","all")) & CDA_available, TRUE, FALSE)
+  if (!use_L0Learn & !use_L1 & !use_CDA) stop("The specified fastmethod is unavailable for the specified family")
+  #Run L0Learn
+  if (use_L0Learn) {
     loss <- ifelse(family == "normal", "SquaredError", "Logistic")
     # Build design matrix
     tmp <- formatInputdata(y=y,x=x,data=data,smoothterms=smoothterms,nknots=nknots,family=family)
@@ -119,39 +129,89 @@ findmodels_fast <- function(y, x, data, smoothterms, nknots=9, groups, constrain
     fit <- L0Learn.fit(x=x, y=y, penalty="L0", maxSuppSize=maxvars, loss=loss, algorithm="CDPSI")
     models <- unique(t(as.matrix(coef(fit) != 0)))
     if (ncol(models) > ncol(x)) models <- models[,-1] #remove intercept
+    models_L0Learn <- models
   } else {
-    fit <- modelSelection(y=y, x=x, data=data, initSearch='CDA', burnin=0, niter=1, center=FALSE, scale=FALSE, smoothterms=smoothterms, nknots=nknots, groups=groups, constraints=constraints, enumerate=enumerate, includevars=includevars, maxvars=maxvars, priorCoef=priorCoef, priorGroup=priorGroup, priorModel=priorModel, priorConstraints=priorConstraints, priorVar=priorVar, priorSkew=priorSkew, neighbours=neighbours, phi=phi, deltaini=deltaini, adj.overdisp=adj.overdisp, hess=hess, optimMethod=optimMethod, optim_maxit=optim_maxit, initpar=initpar, XtXprecomp=XtXprecomp, verbose=verbose)
-    models <- matrix(fit$postMode == 1, nrow=1)
+    models_L0Learn <- NULL
   }
+  #Run L1
+  if (use_L1) {
+    models_L1 <- findmodels_lasso(y=y, x=x, data=data, smoothterms, nknots=nknots, groups=groups, constraints=constraints, enumerate=enumerate, includevars=includevars, maxvars=maxvars, niter=niter, family=family, priorCoef=priorCoef, priorGroup=priorGroup, priorModel=priorModel, priorConstraints=priorConstraints, priorVar=priorVar, priorSkew=priorSkew, neighbours=neighbours, phi=phi, deltaini=deltaini, adj.overdisp=adj.overdisp, hess=hess, optimMethod=optimMethod, optim_maxit=optim_maxit, initpar=initpar, B=B, XtXprecomp=XtXprecomp, verbose=verbose)
+  } else {
+    models_L1 <- NULL
+  }
+  #Run CDA
+  if (use_CDA) {
+    fit <- modelSelection(y=y, x=x, data=data, initSearch='CDA', burnin=0, niter=1, center=FALSE, scale=FALSE, smoothterms=smoothterms, nknots=nknots, groups=groups, constraints=constraints, enumerate=enumerate, includevars=includevars, maxvars=maxvars, priorCoef=priorCoef, priorGroup=priorGroup, priorModel=priorModel, priorConstraints=priorConstraints, priorVar=priorVar, priorSkew=priorSkew, neighbours=neighbours, phi=phi, deltaini=deltaini, adj.overdisp=adj.overdisp, hess=hess, optimMethod=optimMethod, optim_maxit=optim_maxit, initpar=initpar, XtXprecomp=XtXprecomp, verbose=verbose)
+    models_CDA <- matrix(fit$postMode == 1, nrow=1)
+  } else {
+    models_CDA <- NULL
+  }
+  models <- rbind(models_L0Learn, models_L1, models_CDA)  
   return(models)
 }
 
 
-bestBIC_fast <- function(...) {
+# Map GLM family from the format required by modelSelection to that used by glmnet
+# - Families twopiecenormal, laplace and twopiecelaplace are mapped to normal, since these are unavailable in glmnet
+# - Family negbinomial is mapped to Poisson, since the negative binomial is unavailable in glmnet
+family2glmnet <- function(family) {
+    if (family %in% c("normal","twopiecenormal","laplace","twopiecelaplace","auto")) {
+        family_glmnet = "gaussian"
+    } else if (family %in% c("binomial","binomial logit")) {
+        family_glmnet = "binomial"
+    } else if (family %in% c("poisson", "poisson log", "negbinomial")) {
+        family_glmnet = "poisson"
+    } else if (family == "multinomial") {
+        family_glmnet = "multinomial"
+    } else if (family == "cox") {
+        family_glmnet = "cox"
+    } else if (family == "mgaussian") {
+        family_glmnet = "mgaussian"
+    } else {
+        stop("This family is unavailable in glmnet")
+    }
+    return(family_glmnet)
+}
+
+
+findmodels_lasso <- function(y, x, data, smoothterms, nknots=9, groups, constraints, enumerate, includevars, maxvars, niter=5000, family='normal', priorCoef, priorGroup, priorModel=modelbbprior(1,1), priorConstraints, priorVar=igprior(.01,.01), priorSkew=momprior(tau=0.348), neighbours, phi, deltaini, adj.overdisp='intercept', hess='asymp', optimMethod, optim_maxit, initpar='none', B=10^5, XtXprecomp, verbose=TRUE) {
+  # Build design matrix
+  tmp <- modelSelection:::formatInputdata(y=y,x=x,data=data,smoothterms=smoothterms,nknots=nknots,family=family)
+  x <- tmp$x; y <- tmp$y
+  # Call glmnet
+  family_glmnet <- family2glmnet(family)
+  fit <- glmnet::glmnet(x=x, y=y, family=family_glmnet, alpha=1, intercept=FALSE, standardize=TRUE)
+  models <- unique(t(as.matrix(coef(fit) != 0)))
+  return(models)
+}
+
+
+
+bestBIC_fast <- function(..., fastmethod) {
   args <- list(...)
-  args$models <- findmodels_fast(..., priorCoef=bic(), priorModel=modelunifprior())
+  args$models <- findmodels_fast(..., priorCoef=bic(), priorModel=modelunifprior(), fastmethod=fastmethod)
   ans <- do.call(bestBIC, args)
   #ans <- bestEBIC(..., models=models)
   return(ans)  
 }
 
-bestAIC_fast <- function(...) {
+bestAIC_fast <- function(..., fastmethod) {
   args <- list(...)
-  args$models <- findmodels_fast(..., priorCoef=aic(), priorModel=modelunifprior())
+  args$models <- findmodels_fast(..., priorCoef=aic(), priorModel=modelunifprior(), fastmethod=fastmethod)
   ans <- do.call(bestAIC, args)
   return(ans)  
 }
 
-bestEBIC_fast <- function(...) {
+bestEBIC_fast <- function(..., fastmethod) {
   args <- list(...)
-  args$models <- findmodels_fast(..., priorCoef=bic(), priorModel=modelbbprior())
+  args$models <- findmodels_fast(..., priorCoef=bic(), priorModel=modelbbprior(), fastmethod=fastmethod)
   ans <- do.call(bestEBIC, args)
   return(ans)  
 }
 
-bestIC_fast <- function(..., penalty) {
+bestIC_fast <- function(..., penalty, fastmethod) {
   args <- list(...)
-  args$models <- findmodels_fast(..., priorCoef=ic(penalty), priorModel=modelunifprior())
+  args$models <- findmodels_fast(..., priorCoef=ic(penalty), priorModel=modelunifprior(), fastmethod=fastmethod)
   ans <- do.call(bestIC, args, penalty)
   return(ans)  
 }

@@ -17,11 +17,11 @@ plot.msfit= function(x, y, ...) {
 
 
 setMethod("show", signature(object='msfit'), function(object) {
-  message('msfit object with outcome of type ',object$outcometype,', ',object$p,' covariates and ',object$family,' error distribution\n')
+  cat('msfit object with outcome of type ',object$outcometype,', ',object$p,' covariates and ',object$family,' error distribution\n')
   ifelse(any(object$postMode!=0), paste('  Posterior mode: covariate ',which(object$postMode==1)), '  Posterior mode: null model')
-  message("Use postProb() to get posterior model probabilities\n")
-  message("Use coef() or predict() to get BMA estimates and intervals for parameters or given covariate values\n")
-  message("Elements $margpp, $postMode, $postSample and $coef contain further information (see help('msfit') and help('modelSelection') for details)\n")
+  cat("Use postProb() to get posterior model probabilities\n")
+  cat("Use coef() or predict() to get BMA estimates and intervals for parameters or given covariate values\n")
+  cat("Elements $margpp, $postMode, $postSample and $coef contain further information (see help('msfit') and help('modelSelection') for details)\n")
 }
 )
 

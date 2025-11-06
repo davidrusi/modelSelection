@@ -1,10 +1,10 @@
 ### Methods for icfit objects
 
 setMethod("show", signature(object='icfit'), function(object) {
-  message("icfit object\n\n")
-  message("Model with best ",object$criterion,": ",paste(object$topmodel, collapse=' '),"\n\n")
-  message("Use summary(), coef() and predict() to get inference for the top model\n")
-  message("Use coef(object$msfit) and predict(object$msfit) to get BMA estimates and predictions\n")
+  cat("icfit object\n\n")
+  cat("Model with best ",object$criterion,": ",paste(object$topmodel, collapse=' '),"\n\n")
+  cat("Use summary(), coef() and predict() to get inference for the top model\n")
+  cat("Use coef(object$msfit) and predict(object$msfit) to get BMA estimates and predictions\n")
 }
 )
 
@@ -12,8 +12,19 @@ confint.icfit <- function(object, ...) {
     confint(object$topmodel.fit)
 }
 
+#Return non-zero coefficient estimates
 coef.icfit <- function(object,...) {
     coef(object$topmodel.fit)
+}
+
+#Return coefficient estimates for all covariates, including the non-zeroes
+coefall <- function(object, ...) {  UseMethod("coefall") }
+
+coefall.icfit <- function(object) {
+  b <- rep(0, length(object$varnames))
+  names(b) <- object$varnames
+  b[object$topmodel] <- coef(object$topmodel.fit)    
+  return(b)
 }
 
 
@@ -24,6 +35,8 @@ predict.icfit <- function(object, ...) {
 summary.icfit <- function(object, ...) {
     summary(object$topmodel.fit, ...)
 }
+
+
 
 
 ## FIND THE MODEL ATTAINING THE BEST VALUE OF AN INFORMATION CRITERION
@@ -70,8 +83,27 @@ extractmsIC <- function(ms, getICfun) {
     names(data)[-1]= ans$varnames[tm$topvarids]
     f= formula(y ~ -1 + .)
     ans$topmodel.fit= glm(f , data=data, family=family2glm(ms$family))
-    new("icfit",ans)
+    new("icfit", ans)
 }
+
+#Combine two icfit objects into a single one
+combineICfit <- function(fit1, fit2) {
+    if (any(fit1$varnames != fit2$varnames)) stop("Cannot combine two icfit objects with different varnames")
+    ans= vector("list",5)
+    names(ans)= c('topmodel','topmodel.fit','models','varnames','msfit')
+    ans$varnames = fit1$varnames
+    ans$models <- rbind(fit1$models, fit2$models)
+    ans$models <- dplyr::arrange(ans$models, ans$models[[2]])  #sort increasingly by value of the information criterion
+    if (fit1$models[1,2] < fit2$models[1,2]) {
+        ans$topmodel = fit1$topmodel
+        ans$topmodel.fit = fit1$topmodel.fit
+    } else {
+        ans$topmodel = fit2$topmodel
+        ans$topmodel.fit = fit2$topmodel.fit
+    }
+    new("icfit", ans)
+}
+
 
 
 bestBIC <- function(...) {
@@ -107,14 +139,75 @@ bestIC <- function(..., penalty) {
     return(ans)
 }
 
+bestBIC_fast <- function(..., fastmethod='all') {
+  args <- list(...)
+  args$models <- findmodels_fast(..., priorCoef=bic(), priorModel=modelunifprior(), fastmethod=fastmethod)
+  ans <- do.call(bestBIC, args)
+  if (fastmethod %in% c('adaptiveL1','all')) {
+    newmodels <- findmodels_alasso(ans, ...)
+    if (!is.null(newmodels)) {
+      args$models <- newmodels
+      ansnew <- do.call(bestBIC, args)
+      ans <- combineICfit(ans, ansnew)
+    }
+  } 
+  return(ans)  
+}
+
+bestAIC_fast <- function(..., fastmethod='all') {
+  args <- list(...)
+  args$models <- findmodels_fast(..., priorCoef=aic(), priorModel=modelunifprior(), fastmethod=fastmethod)
+  ans <- do.call(bestAIC, args)
+  if (fastmethod %in% c('adaptiveL1','all')) {
+    newmodels <- findmodels_alasso(ans, ...)
+    if (!is.null(newmodels)) {
+      args$models <- newmodels
+      ansnew <- do.call(bestAIC, args)
+      ans <- combineICfit(ans, ansnew)
+    }
+  } 
+  return(ans)  
+}
+
+bestEBIC_fast <- function(..., fastmethod='all') {
+  args <- list(...)
+  args$models <- findmodels_fast(..., priorCoef=bic(), priorModel=modelbbprior(), fastmethod=fastmethod)
+  ans <- do.call(bestEBIC, args)
+  if (fastmethod %in% c('adaptiveL1','all')) {
+    newmodels <- findmodels_alasso(ans, ...)
+    if (!is.null(newmodels)) {
+      args$models <- newmodels
+      ansnew <- do.call(bestEBIC, args)
+      ans <- combineICfit(ans, ansnew)
+    }
+  } 
+  return(ans)  
+}
+
+bestIC_fast <- function(..., penalty, fastmethod='all') {
+  args <- list(...)
+  args$models <- findmodels_fast(..., priorCoef=ic(penalty), priorModel=modelunifprior(), fastmethod=fastmethod)
+  ans <- do.call(bestIC, args, penalty)
+  if (fastmethod %in% c('adaptiveL1','all')) {
+    newmodels <- findmodels_alasso(ans, ...)
+    if (!is.null(newmodels)) {
+      args$models <- newmodels
+      ansnew <- do.call(bestIC, args, penalty)
+      ans <- combineICfit(ans, ansnew)
+    }
+  } 
+  return(ans)  
+}
+
+
 findmodels_fast <- function(y, x, data, smoothterms, nknots=9, groups, constraints, enumerate, includevars, maxvars, niter=5000, family='normal', priorCoef, priorGroup, priorModel=modelbbprior(1,1), priorConstraints, priorVar=igprior(.01,.01), priorSkew=momprior(tau=0.348), neighbours, phi, deltaini, adj.overdisp='intercept', hess='asymp', optimMethod, optim_maxit, initpar='none', B=10^5, XtXprecomp, verbose=TRUE, fastmethod) {
-  if (!fastmethod %in% c("L0Learn","L1","CDA","all")) stop("fastmethod must be 'L0Learn', 'L1', 'CDA' or 'all'")
+  if (!fastmethod %in% c("L0Learn","L1","adaptiveL1","CDA","all")) stop("fastmethod must be 'L0Learn', 'L1', 'adaptiveL1', 'CDA' or 'all'")
   #Determine what model search methods to use
   L0Learn_available <- ifelse(family %in% c("normal","binomial"), TRUE, FALSE)
   L1_available <- ifelse(family %in% c("normal","twopiecenormal","laplace","twopiecelaplace","auto","binomial","binomial logit","poisson","poisson log","negbinomial","multinomial","cox","mnormal"), TRUE, FALSE)
   CDA_available <- ifelse(family %in% c("normal","twopiecenormal","laplace","twopiecelaplace","auto","binomial","binomial logit","poisson","poisson log"), TRUE, FALSE)
   use_L0Learn <- ifelse((fastmethod %in% c("L0Learn","all")) & L0Learn_available, TRUE, FALSE)
-  use_L1 <- ifelse((fastmethod %in% c("L1","all")) & L1_available, TRUE, FALSE)
+  use_L1 <- ifelse((fastmethod %in% c("L1","adaptiveL1","all")) & L1_available, TRUE, FALSE)
   use_CDA <- ifelse((fastmethod %in% c("CDA","all")) & CDA_available, TRUE, FALSE)
   if (!use_L0Learn & !use_L1 & !use_CDA) stop("The specified fastmethod is unavailable for the specified family")
   #Run L0Learn
@@ -146,7 +239,7 @@ findmodels_fast <- function(y, x, data, smoothterms, nknots=9, groups, constrain
   } else {
     models_CDA <- NULL
   }
-  models <- rbind(models_L0Learn, models_L1, models_CDA)  
+  models <- unique(rbind(models_L0Learn, models_L1, models_CDA))
   return(models)
 }
 
@@ -174,48 +267,43 @@ family2glmnet <- function(family) {
 }
 
 
-findmodels_lasso <- function(y, x, data, smoothterms, nknots=9, groups, constraints, enumerate, includevars, maxvars, niter=5000, family='normal', priorCoef, priorGroup, priorModel=modelbbprior(1,1), priorConstraints, priorVar=igprior(.01,.01), priorSkew=momprior(tau=0.348), neighbours, phi, deltaini, adj.overdisp='intercept', hess='asymp', optimMethod, optim_maxit, initpar='none', B=10^5, XtXprecomp, verbose=TRUE) {
+# Return all models visited by the LASSO regularization path. If bini is not missing, adaptive LASSO is used (only on variables such that bini != 0)
+findmodels_lasso <- function(bini, y, x, data, smoothterms, nknots=9, groups, constraints, enumerate, includevars, maxvars, niter=5000, family='normal', priorCoef, priorGroup, priorModel=modelbbprior(1,1), priorConstraints, priorVar=igprior(.01,.01), priorSkew=momprior(tau=0.348), neighbours, phi, deltaini, adj.overdisp='intercept', hess='asymp', optimMethod, optim_maxit, initpar='none', B=10^5, XtXprecomp, verbose=TRUE) {
   # Build design matrix
   tmp <- modelSelection:::formatInputdata(y=y,x=x,data=data,smoothterms=smoothterms,nknots=nknots,family=family)
   x <- tmp$x; y <- tmp$y
-  # Call glmnet
   family_glmnet <- family2glmnet(family)
-  fit <- glmnet::glmnet(x=x, y=y, family=family_glmnet, alpha=1, intercept=FALSE, standardize=TRUE)
-  models <- unique(t(as.matrix(coef(fit) != 0)))
+  if (missing(bini)) { # LASSO
+    fit <- glmnet::glmnet(x=x, y=y, family=family_glmnet, alpha=1, intercept=FALSE, standardize=TRUE)
+    models <- unique(t(as.matrix(coef(fit)[-1,,drop=FALSE] != 0)))
+  } else {             # Adaptive LASSO based on initial parameter estimate bini
+    sel <- (bini != 0)
+    xstd <- scale(x[,sel,drop=FALSE])
+    xstd <- t(t(xstd) * abs(bini[sel]))  
+    fit <- glmnet::glmnet(x=xstd, y=y, family=family_glmnet, alpha=1, intercept=FALSE, standardize=FALSE)
+    msel <- unique(t(as.matrix(coef(fit)[-1,,drop=FALSE] != 0)))
+    models <- matrix(FALSE, nrow=nrow(msel), ncol=ncol(x))
+    models[,sel] <- msel
+  }
   return(models)
 }
 
 
-
-bestBIC_fast <- function(..., fastmethod) {
-  args <- list(...)
-  args$models <- findmodels_fast(..., priorCoef=bic(), priorModel=modelunifprior(), fastmethod=fastmethod)
-  ans <- do.call(bestBIC, args)
-  #ans <- bestEBIC(..., models=models)
-  return(ans)  
+# Given icfit object, search for new models using adaptive LASSO and add them to the icfit object
+findmodels_alasso <- function(ans, ...) {
+  newmodels <- NULL
+  if (length(coef(ans)) > 1) {
+    bini <- coefall(ans)
+    newmodels <- findmodels_lasso(bini, ...)
+    newmodelid <- apply(newmodels, 1, function(z) paste(which(z), collapse = ","))
+    # Keep only new models that aren't already in args$models
+    isnew <- !(newmodelid %in% ans$models$modelid)
+    if (any(isnew)) {
+      newmodels <- newmodels[isnew,,drop=FALSE]
+    }
+  }
+  return(newmodels)
 }
-
-bestAIC_fast <- function(..., fastmethod) {
-  args <- list(...)
-  args$models <- findmodels_fast(..., priorCoef=aic(), priorModel=modelunifprior(), fastmethod=fastmethod)
-  ans <- do.call(bestAIC, args)
-  return(ans)  
-}
-
-bestEBIC_fast <- function(..., fastmethod) {
-  args <- list(...)
-  args$models <- findmodels_fast(..., priorCoef=bic(), priorModel=modelbbprior(), fastmethod=fastmethod)
-  ans <- do.call(bestEBIC, args)
-  return(ans)  
-}
-
-bestIC_fast <- function(..., penalty, fastmethod) {
-  args <- list(...)
-  args$models <- findmodels_fast(..., priorCoef=ic(penalty), priorModel=modelunifprior(), fastmethod=fastmethod)
-  ans <- do.call(bestIC, args, penalty)
-  return(ans)  
-}
-
 
 
 ## EXTRACT INFORMATION CRITERIA FROM AN msfit object

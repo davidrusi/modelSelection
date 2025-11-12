@@ -38,8 +38,9 @@ Model with best AIC, BIC, EBIC or other general information criteria (getIC)
   \item{penalty}{General information penalty. For example, since the AIC
     penalty is 2, bestIC(...,penalty=2) is the same as bestAIC(...)}
   \item{fastmethod}{Method used for fast model search. Set "L0Learn" to
-    use the L0Learn package, "L1" to use LASSO (glmnet package) and
-    "CDA" to use coordinate descent. Not all these options may be
+    use the L0Learn package, "L1" to use LASSO (glmnet package), 
+    "adaptiveL1" for adaptive LASSO, and
+    "CDA" for coordinate descent. Not all these options may be
     available for some GLM families (e.g. L0Learn only supports
     \code{family="normal"} and \code{"binomial"}). The default "all"
     uses all available methods}

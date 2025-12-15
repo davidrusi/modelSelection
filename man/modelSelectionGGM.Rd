@@ -20,7 +20,7 @@
 modelSelectionGGM(y, priorCoef=normalidprior(tau=1), 
 priorModel=modelbinomprior(1/ncol(y)), 
 priorDiag=exponentialprior(lambda=1), center=TRUE, scale=TRUE, 
-global_proposal= 'regression', prob_global=0.5,
+global_proposal= 'none', prob_global=0.5,
 tempering= 0.5, truncratio= 100,
 save_proposal= FALSE, niter=10^3, burnin= round(niter/10), 
 updates_per_iter= ceiling(sqrt(ncol(y))), updates_per_column= 10,

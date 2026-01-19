@@ -21,6 +21,14 @@
 using namespace Rcpp;
 using namespace std;
 
+#include "math.h"
+#include <vector>
+#include <Rcpp.h>
+#include <RcppEigen.h>
+using namespace Eigen;
+//[[Rcpp::depends(RcppEigen)]]
+//[[Rcpp::plugins(openmp)]
+
 
 //*************************************************************************************
 // FUNCTIONS
@@ -94,6 +102,12 @@ void spmat_rowcol2zero(arma::sp_mat *A, int colid); //Set row and colum colid of
 void spmat_droprowcol(arma::sp_mat *A_minusj, arma::sp_mat *A, int j); //drop row & column j from A
 
 void symmat2vec(arma::vec *Aflat, arma::mat *A); //flatten symmetric matrix A, in column-wise order
+
+
+//GLASSO from huge
+List hugeglasso(Eigen::Map<Eigen::MatrixXd> S, NumericVector lambda, bool scr, bool verbose, bool cov_output); // main GLASSO routine
+
+void hugeglasso_sub(Eigen::MatrixXd &S, Eigen::MatrixXd &W, Eigen::MatrixXd &T, int d, double ilambda, int &df, bool scr);
 
 
 #endif /* MODELSEL_H */

@@ -29,6 +29,10 @@ modelSelectionGGM_globalC <- function(y, prCoef, prModel, samplerPars, Omegaini)
     .Call(`_modelSelection_modelSelectionGGM_globalC`, y, prCoef, prModel, samplerPars, Omegaini)
 }
 
+hugeglasso <- function(S, lambda, scr, verbose, cov_output) {
+    .Call(`_modelSelection_hugeglasso`, S, lambda, scr, verbose, cov_output)
+}
+
 marginalLikelihoodCI <- function(Sknownphi, Ssel, Snsel, Sfamily, SpriorCoef, SpriorGroup, Sn, Sp, Sy, Suncens, Ssumy2, Ssumy, Ssumlogyfact, Sx, Scolsumsx, SXtX, SytX, Smethod, Sadjoverdisp, Shesstype, SoptimMethod, Soptim_maxit, Sthinit, Susethinit, SB, Salpha, Slambda, Stau, Staugroup, Staualpha, Sfixatanhalpha, Sr, Sa, Sgroups, Sngroups, Snvaringroup, Sconstraints, Sinvconstraints, SDmat, Slogscale) {
     .Call(`_modelSelection_marginalLikelihoodCI`, Sknownphi, Ssel, Snsel, Sfamily, SpriorCoef, SpriorGroup, Sn, Sp, Sy, Suncens, Ssumy2, Ssumy, Ssumlogyfact, Sx, Scolsumsx, SXtX, SytX, Smethod, Sadjoverdisp, Shesstype, SoptimMethod, Soptim_maxit, Sthinit, Susethinit, SB, Salpha, Slambda, Stau, Staugroup, Staualpha, Sfixatanhalpha, Sr, Sa, Sgroups, Sngroups, Snvaringroup, Sconstraints, Sinvconstraints, SDmat, Slogscale)
 }

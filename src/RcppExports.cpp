@@ -2,6 +2,7 @@
 // Generator token: 10BE3573-1514-4C36-9D1C-5A225CD40393
 
 #include <RcppArmadillo.h>
+#include <RcppEigen.h>
 #include <Rcpp.h>
 
 using namespace Rcpp;
@@ -129,6 +130,21 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< List >::type samplerPars(samplerParsSEXP);
     Rcpp::traits::input_parameter< arma::sp_mat >::type Omegaini(OmegainiSEXP);
     rcpp_result_gen = Rcpp::wrap(modelSelectionGGM_globalC(y, prCoef, prModel, samplerPars, Omegaini));
+    return rcpp_result_gen;
+END_RCPP
+}
+// hugeglasso
+List hugeglasso(Eigen::Map<Eigen::MatrixXd> S, NumericVector lambda, bool scr, bool verbose, bool cov_output);
+RcppExport SEXP _modelSelection_hugeglasso(SEXP SSEXP, SEXP lambdaSEXP, SEXP scrSEXP, SEXP verboseSEXP, SEXP cov_outputSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Eigen::Map<Eigen::MatrixXd> >::type S(SSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type lambda(lambdaSEXP);
+    Rcpp::traits::input_parameter< bool >::type scr(scrSEXP);
+    Rcpp::traits::input_parameter< bool >::type verbose(verboseSEXP);
+    Rcpp::traits::input_parameter< bool >::type cov_output(cov_outputSEXP);
+    rcpp_result_gen = Rcpp::wrap(hugeglasso(S, lambda, scr, verbose, cov_output));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -545,6 +561,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_modelSelection_rnlpCI", (DL_FUNC) &_modelSelection_rnlpCI, 9},
     {"_modelSelection_modelSelectionGGMC", (DL_FUNC) &_modelSelection_modelSelectionGGMC, 5},
     {"_modelSelection_modelSelectionGGM_globalC", (DL_FUNC) &_modelSelection_modelSelectionGGM_globalC, 5},
+    {"_modelSelection_hugeglasso", (DL_FUNC) &_modelSelection_hugeglasso, 5},
     {"_modelSelection_marginalLikelihoodCI", (DL_FUNC) &_modelSelection_marginalLikelihoodCI, 40},
     {"_modelSelection_normalmixGibbsCI", (DL_FUNC) &_modelSelection_normalmixGibbsCI, 13},
     {"_modelSelection_testfunctionCI", (DL_FUNC) &_modelSelection_testfunctionCI, 3},

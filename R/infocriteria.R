@@ -18,7 +18,7 @@ coef.icfit <- function(object,...) {
 }
 
 #Return coefficient estimates for all covariates, including the non-zeroes
-coefall <- function(object, ...) {  UseMethod("coefall") }
+coefall <- function(object) {  UseMethod("coefall") }
 
 coefall.icfit <- function(object) {
   b <- rep(0, length(object$varnames))
@@ -270,7 +270,7 @@ family2glmnet <- function(family) {
 # Return all models visited by the LASSO regularization path. If bini is not missing, adaptive LASSO is used (only on variables such that bini != 0)
 findmodels_lasso <- function(bini, y, x, data, smoothterms, nknots=9, groups, constraints, enumerate, includevars, maxvars, niter=5000, family='normal', priorCoef, priorGroup, priorModel=modelbbprior(1,1), priorConstraints, priorVar=igprior(.01,.01), priorSkew=momprior(tau=0.348), neighbours, phi, deltaini, adj.overdisp='intercept', hess='asymp', optimMethod, optim_maxit, initpar='none', B=10^5, XtXprecomp, verbose=TRUE) {
   # Build design matrix
-  tmp <- modelSelection:::formatInputdata(y=y,x=x,data=data,smoothterms=smoothterms,nknots=nknots,family=family)
+  tmp <- formatInputdata(y=y,x=x,data=data,smoothterms=smoothterms,nknots=nknots,family=family)
   x <- tmp$x; y <- tmp$y
   family_glmnet <- family2glmnet(family)
   if (missing(bini)) { # LASSO

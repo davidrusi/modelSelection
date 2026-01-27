@@ -1,3 +1,9 @@
+VERSION 1.0.6
+- Added beta-binomial prior to modelSelectionGGM
+
+VERSION 1.0.5
+- Added GGM precision matrix estimation from package huge
+
 VERSION 1.0.4
 - Added check that x cannot contain NAs in createDesign
 - Added bestAIC_fast, bestBIC_fast, bestEBIC_fast, bestIC_fast

@@ -99,6 +99,7 @@ modelSelectionGGM= function(y, priorCoef=normalidprior(tau=1), priorModel=modelb
   prCoef= formatmsPriorsMarg(priorCoef=priorCoef, priorVar=priorDiag)
   prCoef= as.list(c(priorlabel=prCoef$priorCoef@priorDistr, prCoef[c('prior','tau','lambda')]))
   prModel= as.list(c(priorlabel=priorModel@priorDistr, priorPars= priorModel@priorPars))
+  prModel[grep("priorPars", names(prModel))] <- as.double(prModel[grep("priorPars", names(prModel))])
     
   #Format posterior sampler parameters
   if (missing(bounds_LIT)) bounds_LIT= log(c("lbound_death"=1/p, "ubound_death"= 1, "lbound_birth"=1/p, "ubound_birth"=p))

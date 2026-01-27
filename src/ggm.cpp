@@ -189,7 +189,7 @@ INPUT/OUTPUT
 
 void GGM_MHwithinGibbs(arma::sp_mat *samples, arma::mat *postmean, arma::Mat<int> *postmeancount, arma::mat *margpp, arma::Mat<int> *margppcount, double *prop_accept, ggmObject *ggm, arma::sp_mat *Omegaini) {
 
-  int i, j, jold, k, *sequence, iter= 0, niter10, number_accept, number_proposed, total_accept=0, total_proposed=0;
+  int i, j, jold, k, *sequence, iter= 0, niter10, number_accept, number_proposed, total_accept=0, total_proposed=0, nonzero_Omegarest=0;
   int burnin= ggm->burnin, niter= ggm->niter, updates_per_iter= ggm->updates_per_iter, p= ggm->ncol;
   double *modelini_logprob= nullptr;
   arma::sp_mat::iterator it;
@@ -219,6 +219,8 @@ void GGM_MHwithinGibbs(arma::sp_mat *samples, arma::mat *postmean, arma::Mat<int
 
       j= sequence[jj];
 
+      if (ggm->priorlabel == "betabinomial") nonzero_Omegarest= count_edges_excludecol(Omegaini, j); //number of non-zero edges in Omegaini excluding column j
+
       //Obtain inverse of Omegaini[-j,-j]
       if ((i==0) && (jj==0)) {
         (*invOmega_j)= get_invOmega_j(Omegaini, j); 
@@ -234,9 +236,9 @@ void GGM_MHwithinGibbs(arma::sp_mat *samples, arma::mat *postmean, arma::Mat<int
       margppcount_row.zeros(p);
 
       if (use_gibbs) {
-        GGM_Gibbs_singlecol(&samples_row, models, postmean, postmeancount, &margpp_row, &margppcount_row, 0, 0, (unsigned int) j, ggm, &Omegacol,  invOmega_j, model_logprob, modelini_logprob); //update row given by j
+        GGM_Gibbs_singlecol(&samples_row, models, postmean, postmeancount, &margpp_row, &margppcount_row, 0, 0, (unsigned int) j, ggm, &Omegacol,  invOmega_j, nonzero_Omegarest, model_logprob, modelini_logprob); //update row given by j
       } else {
-        GGM_birthdeath_singlecol(&samples_row, models, postmean, postmeancount, &margpp_row, &margppcount_row, &number_accept, &number_proposed, 0, 0, (unsigned int) j, ggm, &use_LIT, &Omegacol,  invOmega_j, model_logprob, modelini_logprob); //update row given by j
+        GGM_birthdeath_singlecol(&samples_row, models, postmean, postmeancount, &margpp_row, &margppcount_row, &number_accept, &number_proposed, 0, 0, (unsigned int) j, ggm, &use_LIT, &Omegacol,  invOmega_j, nonzero_Omegarest, model_logprob, modelini_logprob); //update row given by j
         total_accept += number_accept;
         total_proposed += number_proposed;
       }
@@ -429,6 +431,8 @@ void GGM_global_proposal(std::vector<arma::SpMat<short>> *models, std::vector<st
 
     arma::SpMat<short> models_row(p, niter_prop - burnin_prop);
     arma::mat invOmega_j;
+    int nonzero_Omegarest= 0;
+    if (ggm->priorlabel == "betabinomial") nonzero_Omegarest= count_edges_excludecol(Omegaini, j); //number of non-zero edges in Omegaini excluding column j
     if (!ggm->global_regression) invOmega_j= get_invOmega_j(Omegaini, j);
     arma::sp_mat Omegacol= Omegaini->col(j);
     arma::sp_mat *samples_row= nullptr;
@@ -439,9 +443,9 @@ void GGM_global_proposal(std::vector<arma::SpMat<short>> *models, std::vector<st
     int number_accept, number_proposed;
 
     if (use_gibbs) {
-      GGM_Gibbs_singlecol(samples_row, &models_row, nullptr, nullptr, margpp_row, margppcount_row, -burnin_prop, niter_prop-burnin_prop-1, (unsigned int) j, ggm, &Omegacol,  &invOmega_j, &modelj_logprop, logprop_modelini+j);
+      GGM_Gibbs_singlecol(samples_row, &models_row, nullptr, nullptr, margpp_row, margppcount_row, -burnin_prop, niter_prop-burnin_prop-1, (unsigned int) j, ggm, &Omegacol,  &invOmega_j, nonzero_Omegarest, &modelj_logprop, logprop_modelini+j);
     } else {
-      GGM_birthdeath_singlecol(samples_row, &models_row, nullptr, nullptr, margpp_row, margppcount_row, &number_accept, &number_proposed, -burnin_prop, niter_prop-burnin_prop-1, (unsigned int) j, ggm, &use_LIT, &Omegacol,  &invOmega_j, &modelj_logprop, logprop_modelini+j);
+      GGM_birthdeath_singlecol(samples_row, &models_row, nullptr, nullptr, margpp_row, margppcount_row, &number_accept, &number_proposed, -burnin_prop, niter_prop-burnin_prop-1, (unsigned int) j, ggm, &use_LIT, &Omegacol,  &invOmega_j, nonzero_Omegarest, &modelj_logprop, logprop_modelini+j);
     }
 
     //Obtain unique visited models and their probabilities, truncated so probability of top model / any other model <= truncratio
@@ -477,7 +481,7 @@ OUTPUT
 void GGM_CDA(arma::sp_mat *Omega, ggmObject *ggm) {
 
   const int maxit=10;
-  int i, j, k, colid, oldcolid, p= ggm->ncol, changes, changes_colid;
+  int i, j, k, colid, oldcolid, p= ggm->ncol, changes, changes_colid, nonzero_Omegarest=0;
   double mcurrent, mnew, sample_diag;
   arma::mat *sample_offdiag= nullptr, *invOmega_rest;
   arma::sp_mat::const_iterator it;
@@ -494,6 +498,8 @@ void GGM_CDA(arma::sp_mat *Omega, ggmObject *ggm) {
     changes= 0;
     for (colid= 0; colid < p; colid++) {
 
+      if (ggm->priorlabel == "betabinomial") nonzero_Omegarest= count_edges_excludecol(Omega, colid); //number of non-zero edges in Omegaini excluding column colid
+
       if ((k==1) && (colid==0)) {
         (*invOmega_rest)= get_invOmega_j(Omega, colid); 
       } else { //use rank 1 update (quadratic cost in p)
@@ -509,7 +515,7 @@ void GGM_CDA(arma::sp_mat *Omega, ggmObject *ggm) {
       for (it= Omegacol.begin(); it != Omegacol.end(); ++it) modelopt->at(it.row(), it.col())= modelnew->at(it.row(), it.col())= 1;
 
       //Obtain log-marginal + log-prior for current model
-      ms= new modselIntegrals_GGM(marfun, ggm, colid, invOmega_rest);
+      ms= new modselIntegrals_GGM(marfun, ggm, colid, invOmega_rest, nonzero_Omegarest);
 
       ms->getJoint(&mcurrent, nullptr, nullptr, sample_offdiag, &sample_diag, modelopt, nullptr, false);
 
@@ -575,6 +581,7 @@ INPUT
   - ggm: object of class ggmObject storing y, the prior distribution and Gibbs sampling parameters
   - Omegacol: current value of Omega[,colid]
   - invOmega_rest: inverse of Omega[-colid,-colid]
+  - nonzero_Omegarest: number of non-zero entries in Omega[-colid,-colid]
 
 OUTPUT
   - samples: if not nullptr, each column of samples will store Omegacol after applying a Gibbs update to its entries
@@ -597,7 +604,7 @@ OUTPUT
 IMPORTANT: if not nullptr, at input samples and models should only contain zeroes
 
 */
-void GGM_Gibbs_singlecol(arma::sp_mat *samples, arma::SpMat<short> *models, arma::mat *postmean, arma::Mat<int> *postmeancount, arma::vec *margpp, arma::Col<int> *margppcount, int iterini, int iterfi, unsigned int colid, ggmObject *ggm, arma::sp_mat *Omegacol, arma::mat *invOmega_rest, arma::mat *model_logprob = nullptr, double *modelini_logprob = nullptr) {
+void GGM_Gibbs_singlecol(arma::sp_mat *samples, arma::SpMat<short> *models, arma::mat *postmean, arma::Mat<int> *postmeancount, arma::vec *margpp, arma::Col<int> *margppcount, int iterini, int iterfi, unsigned int colid, ggmObject *ggm, arma::sp_mat *Omegacol, arma::mat *invOmega_rest, int nonzero_Omegarest, arma::mat *model_logprob = nullptr, double *modelini_logprob = nullptr) {
 
   int i, j, p= ggm->ncol, col2save;
   double mcurrent, mnew, ppnew, sample_diag, mean_diag;
@@ -627,7 +634,7 @@ void GGM_Gibbs_singlecol(arma::sp_mat *samples, arma::SpMat<short> *models, arma
   for (it= Omegacol->begin(); it != Omegacol->end(); ++it) model->at(it.row(), it.col())= modelnew->at(it.row(), it.col())= 1;
 
   //Obtain log-marginal + log-prior for current model
-  ms= new modselIntegrals_GGM(marfun, ggm, colid, invOmega_rest);
+  ms= new modselIntegrals_GGM(marfun, ggm, colid, invOmega_rest, nonzero_Omegarest);
 
   ms->getJoint(&mcurrent, nullptr, nullptr, sample_offdiag, &sample_diag, model, nullptr, false);
 
@@ -704,6 +711,7 @@ INPUT
   - ggm: object of class ggmObject storing y, the prior distribution and Gibbs sampling parameters
   - Omegacol: current value of Omega[,colid]
   - invOmega_rest: inverse of Omega[-colid,-colid]
+  - nonzero_Omegarest: number of non-zero entries in Omega[-colid,-colid]
 
 OUTPUT
   - samples: if not nullptr, each column of samples will store Omegacol after applying a Gibbs update to its entries
@@ -731,7 +739,7 @@ IMPORTANT: if not nullptr, at input samples and models should only contain zeroe
 
 */
 
-void GGM_birthdeath_singlecol(arma::sp_mat *samples, arma::SpMat<short> *models, arma::mat *postmean, arma::Mat<int> *postmeancount,  arma::vec *margpp, arma::Col<int> *margppcount, int *number_accept, int *number_proposed, int iterini, int iterfi, unsigned int colid, ggmObject *ggm, bool *use_LIT, arma::sp_mat *Omegacol, arma::mat *invOmega_rest, arma::mat *model_logprob = nullptr, double *modelini_logprob = nullptr) {
+void GGM_birthdeath_singlecol(arma::sp_mat *samples, arma::SpMat<short> *models, arma::mat *postmean, arma::Mat<int> *postmeancount,  arma::vec *margpp, arma::Col<int> *margppcount, int *number_accept, int *number_proposed, int iterini, int iterfi, unsigned int colid, ggmObject *ggm, bool *use_LIT, arma::sp_mat *Omegacol, arma::mat *invOmega_rest, int nonzero_Omegarest, arma::mat *model_logprob = nullptr, double *modelini_logprob = nullptr) {
 
   int i, j, p= ggm->ncol, updates_per_column= ggm->updates_per_column, index_birth, index_death, movetype, col2save, colid_int= (int) colid, ppcount=0;
   double pbirth= ggm->pbirth, pdeath= ggm->pdeath, pswap= ggm->pswap, mcurrent, mnew, dpropcurrent, dpropnew, ppnew, sample_diag, mean_diag;
@@ -762,7 +770,7 @@ void GGM_birthdeath_singlecol(arma::sp_mat *samples, arma::SpMat<short> *models,
   for (it= Omegacol->begin(); it != Omegacol->end(); ++it) model->at(it.row(), it.col())= modelnew->at(it.row(), it.col())= 1;
 
   //Obtain log-marginal + log-prior for current model
-  ms= new modselIntegrals_GGM(marfun, ggm, colid, invOmega_rest);
+  ms= new modselIntegrals_GGM(marfun, ggm, colid, invOmega_rest, nonzero_Omegarest);
 
   ms->getJoint(&mcurrent, nullptr, nullptr, sample_offdiag, &sample_diag, model, nullptr, false);
 
@@ -1360,7 +1368,7 @@ INPUT/OUTPUT
 */
 void GGM_MHwithinGibbs_global(arma::sp_mat *postSample, arma::mat *postmean, arma::Mat<int> *postmeancount, arma::mat *margpp, arma::Mat<int> *margppcount, double *prop_accept, std::vector<arma::SpMat<short>> *proposal_models, std::vector<std::vector<double>> *proposal_logprob, double *dpropini, std::vector<std::map<string, double>> *map_logprob, ggmObject *ggm, arma::sp_mat *Omegaini) {
 
-  int i, j, k, i10, iter, newcol, oldcol, *sequence, index_birth, index_death, movetype, number_accept= 0, proposal_idx;
+  int i, j, k, i10, iter, newcol, oldcol, *sequence, index_birth, index_death, movetype, number_accept= 0, proposal_idx, nonzero_Omegarest= 0;
   int burnin= ggm->burnin, niter= burnin + postSample->n_cols, p= ggm->ncol, updates_per_column= ggm->updates_per_column, updates_per_iter= ggm->updates_per_iter;
   double dpostnew, dpostold, dpropnew, dpropold=0, ppnew, sample_diag, mean_diag;
   double prob_global= ggm->prob_global;
@@ -1425,6 +1433,8 @@ void GGM_MHwithinGibbs_global(arma::sp_mat *postSample, arma::mat *postmean, arm
 
       newcol= sequence[j];
 
+      if (ggm->priorlabel == "betabinomial") nonzero_Omegarest= count_edges_excludecol(Omegaini, newcol); //number of non-zero edges in Omegaini[-newcol,-newcol]
+
       //Obtain inverse of Omegaini[-newcol,-newcol]
       if ((i==0) && (j==0)) {
         (*invOmega_newcol)= get_invOmega_j(Omegaini, newcol); 
@@ -1434,7 +1444,7 @@ void GGM_MHwithinGibbs_global(arma::sp_mat *postSample, arma::mat *postmean, arm
       oldcol= newcol;
 
       modselIntegrals_GGM *ms;
-      ms= new modselIntegrals_GGM(marfun, ggm, newcol, invOmega_newcol);
+      ms= new modselIntegrals_GGM(marfun, ggm, newcol, invOmega_newcol, nonzero_Omegarest);
 
       for (k=0; k < updates_per_column; k++) {  //perform multiple updates per column
 
@@ -1524,7 +1534,7 @@ void GGM_MHwithinGibbs_global(arma::sp_mat *postSample, arma::mat *postmean, arm
 
 void GGM_MHwithinGibbs_onlyglobal(arma::sp_mat *postSample, arma::mat *postmean, arma::Mat<int> *postmeancount, arma::mat *margpp, arma::Mat<int> *margppcount, double *prop_accept, std::vector<arma::SpMat<short>> *proposal_models, std::vector<std::vector<double>> *proposal_logprob, double *dpropini, ggmObject *ggm, arma::sp_mat *Omegaini) {
 
-  int i, j, k, i10, iter, newcol, oldcol, *sequence, number_accept= 0, proposal_idx;
+  int i, j, k, i10, iter, newcol, oldcol, *sequence, number_accept= 0, proposal_idx, nonzero_Omegarest= 0;
   int burnin= ggm->burnin, niter= burnin + postSample->n_cols, p= ggm->ncol, updates_per_column= ggm->updates_per_column, updates_per_iter= ggm->updates_per_iter;
   double dpostnew, dpostold, dpropnew, dpropold=0, ppnew, sample_diag, mean_diag;
   arma::mat *mean_offdiag= nullptr, *sample_offdiag= nullptr, *invOmega_newcol;
@@ -1579,6 +1589,8 @@ void GGM_MHwithinGibbs_onlyglobal(arma::sp_mat *postSample, arma::mat *postmean,
 
       newcol= sequence[j];
 
+      if (ggm->priorlabel == "betabinomial") nonzero_Omegarest= count_edges_excludecol(Omegaini, newcol); //number of non-zero edges in Omegaini[-newcol,-newcol]
+
       //Obtain inverse of Omegaini[-newcol,-newcol]
       if ((i==0) && (j==0)) {
         (*invOmega_newcol)= get_invOmega_j(Omegaini, newcol); 
@@ -1588,7 +1600,7 @@ void GGM_MHwithinGibbs_onlyglobal(arma::sp_mat *postSample, arma::mat *postmean,
       oldcol= newcol;
 
       modselIntegrals_GGM *ms;
-      ms= new modselIntegrals_GGM(marfun, ggm, newcol, invOmega_newcol);
+      ms= new modselIntegrals_GGM(marfun, ggm, newcol, invOmega_newcol, nonzero_Omegarest);
 
       for (k=0; k < updates_per_column; k++) {  //perform multiple updates per column
 
@@ -1972,13 +1984,14 @@ void save_postmean(arma::mat *postmean, arma::Mat<int> *postmeancount, arma::SpM
 
 
 
-/* Compute log-joint (log-marginal likelihood + log prior) for model specifying non-zero entries in column colid of Omega, given the entries selected by model of the inverse of Omega[-colid,-colid]
+/* Compute log-joint (log-marginal likelihood + log prior) for model specifying non-zero entries in column colid of Omega, given the inverse of Omega[-colid,-colid]
 
   INPUT
   - model: entries that are non-zero
   - colid: column id
   - ggm: object storing info about the Gaussian graphical model
   - Omegainv: inverse of Omega[-colid,-colid]
+  - nonzeroes_Omega: number of non-zero entries in Omega[-colid,-colid]
   - cholU_old: Cholesky decomposition of U for a previous model (modelold) that differs from model by adding/dropping at most 1 non-zero entry
   - modelold: entries that were non-zero in the previous model
 
@@ -1989,7 +2002,7 @@ void save_postmean(arma::mat *postmean, arma::Mat<int> *postmeancount, arma::SpM
   - cholU: Cholesky decomposition of U
 
 */
-void GGMrow_marg(double *logjoint, arma::mat *m, arma::mat *cholUinv, arma::mat *cholU, arma::SpMat<short> *model, unsigned int colid, ggmObject *ggm, arma::mat *Omegainv, arma::mat *cholU_old=nullptr, arma::SpMat<short> *modelold=nullptr) {
+void GGMrow_marg(double *logjoint, arma::mat *m, arma::mat *cholUinv, arma::mat *cholU, arma::SpMat<short> *model, unsigned int colid, ggmObject *ggm, arma::mat *Omegainv, int nonzeroes_Omega, arma::mat *cholU_old=nullptr, arma::SpMat<short> *modelold=nullptr) {
 
   unsigned int npar= model->n_nonzero -1;
   int colidint= (int) colid;
@@ -2080,7 +2093,7 @@ void GGMrow_marg(double *logjoint, arma::mat *m, arma::mat *cholUinv, arma::mat 
 
     } 
 
-    /* CHUNK TO DEBUG: PRINTS APPROXIMATION ERROR FOR FAST CHOLESKY UPDATE, IF EVER ABOVE 1.e-4 */
+    /* CHUNK TO HELP DEBUG (no longer needed, kept just in case): PRINTS APPROXIMATION ERROR FOR FAST CHOLESKY UPDATE, IF EVER ABOVE 1.e-4 */
     /*if (fastupdate) {
       arma::mat Omegainv_model(npar, npar); 
       get_Omegainv_model(&Omegainv_model, Omegainv, model, colid); //copy Omegainv[model,model] onto Omegainv_model (excluding colid)
@@ -2114,7 +2127,7 @@ void GGMrow_marg(double *logjoint, arma::mat *m, arma::mat *cholUinv, arma::mat 
 
   }
 
-  (*logjoint) += logprior_GGM(&model_offdiag, ggm);
+  (*logjoint) += logprior_GGM(&model_offdiag, ggm, nonzeroes_Omega);
 
 }
 
@@ -2146,6 +2159,7 @@ void get_Omegainv_model(arma::mat *Omegainv_model, arma::mat *Omegainv, arma::Sp
   - colid: column id
   - ggm: object storing info about the Gaussian graphical model
   - Omegainv_model: ignored, kept for compatibility with GGMrow_marg
+  - nonzeroes_Omega: ignored, kept for compatibility with GGMrow_marg
   - cholXtX_old: Cholesky decomposition of X^T X for a previous model (modelold) that differs from model by adding/dropping at most 1 non-zero entry
   - modelold: entries that were non-zero in the previous model
 
@@ -2156,7 +2170,7 @@ void get_Omegainv_model(arma::mat *Omegainv_model, arma::mat *Omegainv, arma::Sp
   - cholXtX: Cholesky decomposition of X^T X, where X contains the columns of y selected by model
 
 */
-void GGMrow_marg_regression(double *logjoint, arma::mat *m, arma::mat *cholUinv, arma::mat *cholXtX, arma::SpMat<short> *model, unsigned int colid, ggmObject *ggm, arma::mat *Omegainv_model, arma::mat *cholXtX_old=nullptr, arma::SpMat<short> *modelold= nullptr) {
+void GGMrow_marg_regression(double *logjoint, arma::mat *m, arma::mat *cholUinv, arma::mat *cholXtX, arma::SpMat<short> *model, unsigned int colid, ggmObject *ggm, arma::mat *Omegainv_model, int nonzeroes_Omega, arma::mat *cholXtX_old=nullptr, arma::SpMat<short> *modelold= nullptr) {
 
   unsigned int npar= model->n_nonzero -1;
   arma::SpMat<short> model_offdiag(ggm->ncol -1, 1);
@@ -2262,24 +2276,64 @@ void GGMrow_marg_regression(double *logjoint, arma::mat *m, arma::mat *cholUinv,
 
   }
 
-  (*logjoint) += logprior_GGM(&model_offdiag, ggm);
+  (*logjoint) += logprior_GGM_regression(&model_offdiag, ggm);
 
 }
 
 
-double logprior_GGM(arma::SpMat<short> *model, ggmObject *ggm) {
+/* Prior model probabilities for the GGM
+  INPUT
+  - model: entries that are non-zero
+  - ggm: object storing info about the Gaussian graphical model
+  - nonzeroes_Omega: number of non-zero entries in the other columns of Omega (excluding the current column specified by model)
+
+  OUTPUT: log-prior probability of the model
+  */
+double logprior_GGM(arma::SpMat<short> *model, ggmObject *ggm, int nonzeroes_Omega) {
   double ans;
-  //string priorlabel= as<string> (ggm->prModel["priorlabel"]);
+  double npar= (double) model->n_nonzero; 
 
   if (ggm->priorlabel == "binomial") {
-//  if (ggm->prModel["priorlabel"] == "binomial") {
-    double npar= (double) model->n_nonzero; 
-    double p= ggm->priorPars_p;
-    //double p= as<double>(ggm->prModel["priorPars.p"]); 
+    double p= ggm->priorPars_p[0];
 
     ans= npar * log(p) + ((double) (model->n_rows) - npar) * log(1-p);
 
-  } else Rf_error("This model prior is not implemented\n");
+  } else if (ggm->priorlabel == "betabinomial") {
+    double alpha_p= ggm->priorPars_p[0];
+    double beta_p= ggm->priorPars_p[1];
+    int selected_edges= npar + nonzeroes_Omega; //total number of selected edges in the graph
+
+    ans = bbPrior(selected_edges, ggm->nedges, alpha_p, beta_p, 1);
+
+  } else Rf_error("Only the binomial and beta-binomial priors are currently implemented\n");
+  
+  return ans;
+}
+
+
+/* Prior model probabilities for the regression proposal in the GGM setting
+  INPUT
+  - model: entries that are non-zero
+  - ggm: object storing info about the Gaussian graphical model
+  
+  OUTPUT: log-prior probability of the model under the regression proposal
+*/
+double logprior_GGM_regression(arma::SpMat<short> *model, ggmObject *ggm) {
+  double ans;
+  double npar= (double) model->n_nonzero; 
+
+  if (ggm->priorlabel == "binomial") {
+    double p= ggm->priorPars_p[0];
+
+    ans= npar * log(p) + ((double) (model->n_rows) - npar) * log(1-p);
+
+  } else if (ggm->priorlabel == "betabinomial") {
+    double alpha_p= ggm->priorPars_p[0];
+    double beta_p= ggm->priorPars_p[1];
+
+    ans = bbPrior(npar, model->n_rows, alpha_p, beta_p, 1);
+
+  } else Rf_error("Only the binomial and beta-binomial priors are currently implemented\n");
   
   return ans;
 }
@@ -2335,6 +2389,25 @@ bool checkNonZeroDiff(const arma::SpMat<short>* A, const arma::SpMat<short>* B, 
 
     return true;
 }
+
+
+/* Count the number of edges (number of A[i,j] != 0) in a sparse matrix A, excluding column col_exclude
+
+Note: diagonal entries A[i,i] are not counted as edges. 
+
+*/
+int count_edges_excludecol(arma::sp_mat *A, int col_exclude) {
+  int count=0, k;
+  int p= A->n_cols;
+  for (k=0; k<p; k++) {
+    if (k != col_exclude) count += A->col(k).n_nonzero;
+  }
+  count -= (A->col(col_exclude).n_nonzero - 1); //off-diagonal entries in A[col_exclude,-col_exclude] were counted, so subtract them
+  count -= (p - 1); //do not count diagonal entries
+  count /= 2; //avoid counting each edge twice
+  return count;
+}
+
 
 //Set row and colum colid of A to 0
 void spmat_rowcol2zero(arma::sp_mat *A, int colid) {

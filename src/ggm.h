@@ -48,9 +48,9 @@ void GGM_MHwithinGibbs_onlyglobal(arma::sp_mat *postSample, arma::mat *postmean,
 
 void GGM_CDA(arma::sp_mat *Omega, ggmObject *ggm);
 
-void GGM_Gibbs_singlecol(arma::sp_mat *samples, arma::SpMat<short> *models, arma::mat *postmean, arma::Mat<int> *postmeancount, arma::vec *margpp, arma::Col<int> *margppcount, int iterini, int iterfi, unsigned int colid, ggmObject *ggm, arma::sp_mat *Omegacol, arma::mat *invOmega_rest, arma::mat *model_logprob, double *modelini_logprob);
+void GGM_Gibbs_singlecol(arma::sp_mat *samples, arma::SpMat<short> *models, arma::mat *postmean, arma::Mat<int> *postmeancount, arma::vec *margpp, arma::Col<int> *margppcount, int iterini, int iterfi, unsigned int colid, ggmObject *ggm, arma::sp_mat *Omegacol, arma::mat *invOmega_rest, int nonzero_Omegarest, arma::mat *model_logprob, double *modelini_logprob);
 
-void GGM_birthdeath_singlecol(arma::sp_mat *samples, arma::SpMat<short> *models, arma::mat *postmean, arma::Mat<int> *postmeancount, arma::vec *margpp, arma::Col<int> *margppcount, int *number_accept, int *number_proposed, int iterini, int iterfi, unsigned int colid, ggmObject *ggm, bool *use_LIT, arma::sp_mat *Omegacol, arma::mat *invOmega_rest, arma::mat *model_logprob, double *modelini_logprob);
+void GGM_birthdeath_singlecol(arma::sp_mat *samples, arma::SpMat<short> *models, arma::mat *postmean, arma::Mat<int> *postmeancount, arma::vec *margpp, arma::Col<int> *margppcount, int *number_accept, int *number_proposed, int iterini, int iterfi, unsigned int colid, ggmObject *ggm, bool *use_LIT, arma::sp_mat *Omegacol, arma::mat *invOmega_rest, int nonzero_Omegarest, arma::mat *model_logprob, double *modelini_logprob);
 
 void update_margpp_raoblack(arma::vec *margpp, double ppnew, arma::SpMat<short> *model, arma::SpMat<short> *modelnew);
 
@@ -85,17 +85,20 @@ void save_postmean(arma::mat *postmean, arma::Mat<int> *postmeancount, arma::SpM
 
 
 //Obtaining marginal likelihoods
-void GGMrow_marg(double *logjoint, arma::mat *m, arma::mat *cholUinv, arma::mat *cholU, arma::SpMat<short> *model, unsigned int colid, ggmObject *ggm, arma::mat *Omegainv, arma::mat *cholU_old, arma::SpMat<short> *modelold);
+void GGMrow_marg(double *logjoint, arma::mat *m, arma::mat *cholUinv, arma::mat *cholU, arma::SpMat<short> *model, unsigned int colid, ggmObject *ggm, arma::mat *Omegainv, int nonzeroes_Omega, arma::mat *cholU_old, arma::SpMat<short> *modelold);
 void get_Omegainv_model(arma::mat *Omegainv_model, arma::mat *Omegainv, arma::SpMat<short> *model, unsigned int colid);
 
-void GGMrow_marg_regression(double *logjoint, arma::mat *m, arma::mat *cholUinv, arma::mat *cholXtX, arma::SpMat<short> *model, unsigned int colid, ggmObject *ggm, arma::mat *Omegainv_model, arma::mat *cholXtX_old, arma::SpMat<short> *modelold);
+void GGMrow_marg_regression(double *logjoint, arma::mat *m, arma::mat *cholUinv, arma::mat *cholXtX, arma::SpMat<short> *model, unsigned int colid, ggmObject *ggm, arma::mat *Omegainv_model, int nonzeroes_Omega, arma::mat *cholXtX_old, arma::SpMat<short> *modelold);
 
-double logprior_GGM(arma::SpMat<short> *model, ggmObject *ggm);
+double logprior_GGM(arma::SpMat<short> *model, ggmObject *ggm, int nonzeroes_Omega);
+double logprior_GGM_regression(arma::SpMat<short> *model, ggmObject *ggm);
 
 //Matrix manipulation
 void spmatsym_save2flat(arma::sp_mat *ans, arma::sp_mat *A, int col2store); //copy symmetric sp_mat in flat format to A(,col2store)
 
-bool checkNonZeroDiff(const arma::SpMat<short>* A, const arma::SpMat<short>* B, int maxdif);
+bool checkNonZeroDiff(const arma::SpMat<short>* A, const arma::SpMat<short>* B, int maxdif); //Check if sparse matrices A and B have <= maxdif different non-zero entries
+
+int count_edges_excludecol(arma::sp_mat *A, int col_exclude); //count number of non-zero edges in A excluding column col_exclude
 
 void spmat_rowcol2zero(arma::sp_mat *A, int colid); //Set row and colum colid of A to 0
 

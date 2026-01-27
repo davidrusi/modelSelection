@@ -12,6 +12,7 @@ ggmObject::ggmObject(arma::mat *y, List prCoef, List prModel, List samplerPars, 
   //Data summaries
   this->n= y->n_rows;
   this->ncol= y->n_cols;
+  this->nedges= (this->ncol) * (this->ncol -1) / 2;
 
   if (computeS) {
     this->S= (*y).t() * (*y);
@@ -23,8 +24,33 @@ ggmObject::ggmObject(arma::mat *y, List prCoef, List prModel, List samplerPars, 
   this->prCoef_lambda= as<double>(prCoef["lambda"]);
   this->prCoef_tau = as<double>(prCoef["tau"]);
 
-  this->priorlabel= as<string> (prModel["priorlabel"]);
-  this->priorPars_p= as<double>(prModel["priorPars.p"]);
+  this->priorlabel= as<string> (prModel["priorlabel"]);  // Currently only "binomial" is possible
+  if (this->priorlabel != "binomial") {
+    Rf_error("This model prior is not implemented\n");
+  }
+
+  // Check if priorPars.p exists (Binomial prior) or if priorPars.alpha.p and priorPars.beta.p exist (Beta-Binomial prior)
+  Rcpp::CharacterVector prNames = prModel.names();
+  std::vector<std::string> nameVec = Rcpp::as<std::vector<std::string>>(prNames);
+  bool has_p = std::find(nameVec.begin(), nameVec.end(), "priorPars.p") != nameVec.end();
+
+  if (has_p) {   
+    // Binomial prior
+    this->priorPars_p.push_back(Rcpp::as<double>(prModel["priorPars.p"]));
+  } else {
+    // Beta-Binomial prior
+    this->priorlabel = "betabinomial";
+    
+    // Check if either of the beta-binomial parameters are missing
+    bool has_alphap = std::find(nameVec.begin(), nameVec.end(), "priorPars.alpha.p") != nameVec.end();
+    bool has_betap = std::find(nameVec.begin(), nameVec.end(), "priorPars.beta.p") != nameVec.end();
+    if (!has_alphap || !has_betap) {
+        Rcpp::stop("Either 'priorPars.p' or both 'priorPars.alpha.p' and 'priorPars.beta.p' must be specified.");
+    }
+    
+    this->priorPars_p.push_back(Rcpp::as<double>(prModel["priorPars.alpha.p"]));
+    this->priorPars_p.push_back(Rcpp::as<double>(prModel["priorPars.beta.p"]));
+  }
 
   //MCMC sampler parameters
   CharacterVector samplerR= samplerPars["sampler"];
@@ -70,6 +96,7 @@ ggmObject::ggmObject(ggmObject *ggm) {
   //Data summaries
   this->n= ggm->n;
   this->ncol= ggm->ncol;
+  this->nedges= ggm->nedges;
   this->S= ggm->S;
 
   //Parameters of prior distribution  
@@ -132,7 +159,7 @@ modselIntegrals::modselIntegrals(pt2margFun marfun, pt2modelpriorFun priorfun, i
 
   this->maxIntegral= -INFINITY;
 
-  this->maxsave= 1000000000; //save first 10^9 models
+  this->maxsave= 1000000; //save first 10^6 models
 
   this->zerochar = (char *) calloc(nvars+1, sizeof(char));
   for (i=0; i<nvars; i++) this->zerochar[i]= '0';
@@ -259,7 +286,7 @@ std::string modselIntegrals::getModelid(arma::SpMat<short> *model) {
 
 
 //Class constructor
-modselIntegrals_GGM::modselIntegrals_GGM(pt2GGM_rowmarg jointFunction, ggmObject *ggm, unsigned int colid, arma::mat *Omegainv) {
+modselIntegrals_GGM::modselIntegrals_GGM(pt2GGM_rowmarg jointFunction, ggmObject *ggm, unsigned int colid, arma::mat *Omegainv, int nonzero_Omega) {
 
   int i;
   this->nvars= ggm->ncol - 1;
@@ -271,6 +298,8 @@ modselIntegrals_GGM::modselIntegrals_GGM(pt2GGM_rowmarg jointFunction, ggmObject
   this->colid= colid;
 
   this->Omegainv= Omegainv;
+
+  this->nonzero_Omega= nonzero_Omega;
 
   this->maxIntegral= -1.0e250;
 
@@ -337,7 +366,7 @@ void modselIntegrals_GGM::getJoint(double *logjoint, arma::mat *mean_offdiag, do
     cholV= new arma::mat(npar, npar);
     cholVinv= new arma::mat(npar, npar);
 
-    jointFunction(logjoint, m, cholV, cholVinv, model, colid, this->ggm, Omegainv, cholVinv_old, modelold);
+    jointFunction(logjoint, m, cholV, cholVinv, model, colid, this->ggm, Omegainv, nonzero_Omega, cholVinv_old, modelold);
 
     if (ggm->use_tempering) (*logjoint) *= (ggm->tempering);
 
@@ -433,7 +462,7 @@ void modselIntegrals_GGM::getMode(double *logjoint, arma::mat *mode_offdiag, dou
     cholV= new arma::mat(npar, npar);
     cholVinv= new arma::mat(npar, npar);
 
-    jointFunction(logjoint, m, cholV, cholVinv, model, colid, this->ggm, Omegainv, cholVinv_old, modelold);
+    jointFunction(logjoint, m, cholV, cholVinv, model, colid, this->ggm, Omegainv, nonzero_Omega, cholVinv_old, modelold);
 
     if (ggm->use_tempering) (*logjoint) *= (ggm->tempering);
 

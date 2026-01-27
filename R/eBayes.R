@@ -105,14 +105,14 @@ modelSelection_eBayes= function(Z, wini, niter.mcmc= 5000, niter.mstep= 1000, ni
             fbest= fval[i]= eBayes_logit_objective(w, msfit=ms, Z=Z, priorvar.w=priorvar.w, Vinv=Vinv)
             #fbest= fval[i]= eBayes_em_logit_objective(w, msfit=ms, Z=Z, priorvar.w=priorvar.w, Vinv=Vinv)
             wbest= w
-            if (verbose) message("Done\n\n","Iteration", "Objective function", "Hyper-parameter", "\n", i, fval[i], w, "\n")
+            if (verbose) message(paste("Done\n\n","Iter", "Objective fun", "Hyper-parameter", "\n", i, fval[i], paste(w, collapse=" "), "\n"))
         }
         if (fval[i+1] >= fval[i]) { noimprove= 0 } else { noimprove= noimprove + 1 }
         if (fval[i+1] > fbest) { fbest= fval[i+1]; wbest= wnew }
         w= wnew
         found = (i >= niter.eBayes) || (maxstep < 0.01) || (noimprove > 1)
         i= i + 1
-        if (verbose) message(" ", i, w, fval[i], "\n")
+        if (verbose) message(paste(" ", i, fval[i], paste(w, collapse=" "), "\n"))
     }
     # Run modelSelection with empirical Bayes prior probabilities
     if (verbose) message("Done. \n","Final MCMC with best hyper-parameter value... ")

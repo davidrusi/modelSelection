@@ -5,6 +5,8 @@
 //#include <Rcpp.h>
 #include <map>
 #include <string>
+#include <vector>
+
 #include "modelSel_regression.h"
 #include "cstat.h"
 using namespace std;
@@ -29,6 +31,7 @@ public:
 
   int n;    //sample size nrow(y)
   int ncol; //number of variables ncol(y)
+  int nedges; //number of possible edges = ncol * (ncol - 1) / 2
 
   int burnin;  //number of MCMC burnin iterations
   double pbirth;  //probability of birth move, only used when sampler is "birthdeath" or "LIT"
@@ -53,8 +56,7 @@ public:
   //List prCoef;  //prior on parameters
 
   std::string priorlabel; //Label for model space prior. Currently only "binomial" is possible, P(Omega_{jk} != 0) = priorPars_p
-  double priorPars_p;
-  //List prModel; //prior on model
+  std::vector<double> priorPars_p;
 
   std::string sampler; //MCMC sampler type, e.g. Gibbs, birth-death
   //List samplerPars; //posterior sampler parameters
@@ -115,7 +117,7 @@ private:
 
 //pointer to function to compute log joint (log marginal likelihood + log model prior prob) for a given row
 //GGMrow_marg is an example of such a function
-typedef void(*pt2GGM_rowmarg)(double *, arma::mat *, arma::mat *, arma::mat *, arma::SpMat<short> *, unsigned int, ggmObject *, arma::mat *, arma::mat *, arma::SpMat<short> *);  
+typedef void(*pt2GGM_rowmarg)(double *, arma::mat *, arma::mat *, arma::mat *, arma::SpMat<short> *, unsigned int, ggmObject *, arma::mat *, int , arma::mat *, arma::SpMat<short> *);  
 
 
 /************************************************************************************/
@@ -138,7 +140,7 @@ class modselIntegrals_GGM {
 
 public:
 
-  modselIntegrals_GGM(pt2GGM_rowmarg jointFunction, ggmObject *ggm, unsigned int colid, arma::mat *Omegainv); 
+  modselIntegrals_GGM(pt2GGM_rowmarg jointFunction, ggmObject *ggm, unsigned int colid, arma::mat *Omegainv, int nonzero_Omega); 
   
   ~modselIntegrals_GGM();
 
@@ -151,6 +153,8 @@ public:
   double maxIntegral; //Stores value of largest integral
 
   string maxModel; //Stores model with largest integral, e.g. "10001" 
+
+  int nonzero_Omega; //number of non-zero entries in Omega[-colid,-colid]
 
   int nvars; //number of variables (ncol(Omega) - 1)
 

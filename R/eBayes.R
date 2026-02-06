@@ -46,7 +46,8 @@ plot_taylor_approximation <- function(
 
 
 
-# - Z: p x q matrix containing the q meta-covariates for the p covariates. It should not include an intercept, as it's already automatically added
+# - Z: In regression, p x q matrix containing the q meta-covariates for the p parameters of interest. It should not include an intercept, as it's already automatically added
+#      In GGMs, a p x p matrix or list of p x p matrices
 # - wini: Optional. Initial value for the q hyper-parameters
 # - niter.mcmc= number of iterations in the final MCMC, run once after hyper-parameter estimates have been obtained
 # - niter.mstep= number of MCMC iterations in each M-step required to update hyper-parameter estimates
@@ -62,64 +63,147 @@ modelSelection_eBayes= function(Z, wini, niter.mcmc= 5000, niter.mstep= 1000, ni
     }
     sel= (colnames(Z) != "(Intercept)")
     if (sum(sel) > 0) Z[,sel]= round(residuals(lm(Z[,sel] ~ 1)), 3)
-    # Default hyper-parameters prior variance
-    if (missing(priorvar.w)) priorvar.w= eBayes_priorelicit(Z=Z, targetprob=0.95, min_priorprob=0.001, prior="zellner")
+    # Call generic eBayes function
+    modelSelectionGeneric_eBayes(msfun="modelSelection", Z=Z, wini=wini, niter.mcmc=niter.mcmc, niter.mstep=niter.mstep, niter.eBayes=niter.eBayes, priorvar.w=priorvar.w, verbose=verbose, ...)
+}
+
+modelSelectionGGM_eBayes= function(Z, wini, niter.mcmc= 5000, niter.mstep= 1000, niter.eBayes= 20, priorvar.w, verbose=TRUE, ...) {
+    # Check that Z has the right format
+    if (missing(Z)) {
+        params= eval(quote(list(...)))
+        if ("y" %in% names(params)) p= ncol(params$y)
+        Z = matrix(1, nrow= p*(p-1)/2, ncol=1)
+    } else {
+        if (is.matrix(Z)) {
+          if (nrow(Z) != ncol(Z)) stop("Z must be a square matrix with the same dimensions as y")
+          Z = cbind(1, matrix(Z[upper.tri(Z)], ncol=1))
+        } else if (is.list(Z)) {
+          if (!all(sapply(Z, is.matrix))) stop("Z is a list but some of its entries are not a matrix")
+          Z = do.call(cbind, lapply(Z, function(A) A[upper.tri(A)]))
+        } else {
+          stop("If specified, Z must be a matrix or a list. If missing, it's taken to only contain the intercept")
+        }
+    }
+    # Call generic eBayes function
+    modelSelectionGeneric_eBayes(msfun="modelSelectionGGM", Z=Z, wini=wini, niter.mcmc=niter.mcmc, niter.mstep=niter.mstep, niter.eBayes=niter.eBayes, priorvar.w=priorvar.w, verbose=verbose, ...)
+}
+
+# - modselfun: function returning a list that has a component $margpp storing posterior marginal inclusion probabilities. 
+#              Set "modelSelection" for linear regression, GLMs, GAMs, and "modelSelectionGGM" for Gaussian graphical models
+#              The function must have input arguments priorModel, niter and verbose
+modelSelectionGeneric_eBayes= function(msfun, Z, wini, niter.mcmc= 5000, niter.mstep= 1000, niter.eBayes= 20, priorvar.w, verbose=TRUE, ...) {
+    
+    if (msfun == "modelSelection") {
+        modselfun <- modelSelection
+        # Default hyper-parameters prior variance
+        if (missing(priorvar.w)) priorvar.w= eBayes_priorelicit(Z=Z, targetprob=0.95, min_priorprob=0.001, prior="zellner")
+    } else if (msfun == "modelSelectionGGM") {
+        modselfun <- modelSelectionGGM
+        # Default hyper-parameters prior variance
+        if (missing(priorvar.w)) {
+            if (ncol(Z)==1) {
+                priorvar.w= eBayes_priorelicit(Z=Z, targetprob=0.95, min_priorprob=0.001, prior="zellner")
+            } else {
+                priorvar.w= eBayes_priorelicit(Z=Z, targetprob=0.95, min_priorprob=0.001, prior="zellner")
+            }
+        }
+    } else stop("An invalid 'msfun' was provided")
+
     # Get initial parameter estimates
     if (verbose) message("Initializing hyper-parameter estimates... ")
     if (missing(wini)) {
         # Obtain posterior inclusion prob under Beta-Binomial(1,1) model prior
-        ms= modelSelection(priorModel=modelbbprior(), niter=niter.mstep, verbose=FALSE, ...)
+        ms= modselfun(priorModel=modelbbprior(), niter=niter.mstep, verbose=FALSE, ...)
+        # Extract marginal posterior inclusion probabilities
+        if (msfun == "modelSelectionGGM") {
+            k = (1:ms$p)
+            exclude_param <- k*(k+1)/2
+            pip= ms$margpp[-exclude_param]  #diagonal entries are always non-zero (PIP=1)
+        } else {
+            pip= ms$margpp
+        }
+        # Set initial estimate using solution from full-rank/clustering case 
+        wini= eBayes_mstep_init(Z=Z, postprob=pip, priorvar.w=priorvar.w)
+        w= wini$w
     } else {
-        # Obtain posterior inclusion prob under Bernoulli prior for given wini
-        priorprob= 1 / (1 + exp(- Z %*% matrix(wini,ncol=1)))
-        priorModel= modelbinomprior(priorprob)
-        ms= modelSelection(priorModel=priorModel, niter=niter.mstep, verbose=FALSE, ...)
+        w= wini
+        wini= eBayes_mstep_init(Z=Z)
+        if (msfun == "modelSelectionGGM") {
+            p = (1 + sqrt(1 + 8 * nrow(Z)))/2  #figure out p from number of upper-triangular entries (rows in Z)
+            k = (1:p)
+            exclude_param <- k*(k+1)/2
+        }
     }
-    # Set initial estimate using solution from full-rank/clustering case 
-    wini= eBayes_mstep_init(Z=Z, postprob=ms$margpp, priorvar.w=priorvar.w)
+
+
     # Iterate
     i = 1
-    w= wini$w
     found= FALSE
-    Vinv= (t(Z) %*% Z) / nrow(Z)
+    Vinv= (t(Z) %*% Z) / ncol(Z)
     priorhess= - Vinv / priorvar.w
     fval= double(niter.eBayes + 1)
-    fval[1]= fbest= NA
+    fval[1]= fbest= wbest = NA
     noimprove= 0
     while (!found) {
+        # Obtain current prior inclusion probabilities
+        if ((msfun == "modelSelectionGGM") && (ncol(Z) == 1)) {
+           priorprob= as.vector(1 / (1 + exp(- w)))
+        } else {
+           priorprob= 1 / (1 + exp(- Z %*% w))
+        }
         # E-step: find posterior probabilities for current w
-        priorprob= 1 / (1 + exp(- Z %*% w))
         priorModel= modelbinomprior(priorprob)
-        ms= modelSelection(priorModel=priorModel, niter=niter.mstep, verbose=FALSE, ...)
+        ms= modselfun(priorModel=priorModel, niter=niter.mstep, verbose=FALSE, ...)
+        # Extract marginal posterior inclusion probabilities
+        if (msfun == "modelSelectionGGM") {
+          pip <- ms$margpp[-exclude_param]  #diagonal entries are always non-zero (PIP=1)
+        } else {
+          pip <- ms$margpp
+        }
         # M-step
         if (wini$fullrankcase) {
-            wnew= eBayes_mstep_fullrank(Z=Z, Uinv=wini$Uinv, postprob=ms$margpp, wcur=w, priorvar.w=priorvar.w)
+            wnew= eBayes_mstep_fullrank(Z=Z, Uinv=wini$Uinv, postprob=pip, wcur=w, priorvar.w=priorvar.w)
         } else {
-            wnew= eBayes_mstep(wcurrent=w, Z=Z, postprob=ms$margpp, maxiter=10, priorvar.w=priorvar.w, Vinv=Vinv, priorhess=priorhess)$w
+            wnew= eBayes_mstep(wcurrent=w, Z=Z, postprob=pip, maxiter=10, priorvar.w=priorvar.w, Vinv=Vinv, priorhess=priorhess)$w
         }
         maxstep= max(abs(wnew - w))
         # Objective function
-        fval[i+1]= eBayes_logit_objective(wnew, msfit=ms, Z=Z, priorvar.w=priorvar.w, Vinv=Vinv)
-        #fval[i+1]= eBayes_em_logit_objective(wnew, msfit=ms, Z=Z, priorvar.w=priorvar.w, Vinv=Vinv)
-        if (is.na(fbest)) {
+        if (msfun == "modelSelection") {
+          fval[i+1]= eBayes_logit_objective(wnew, msfit=ms, Z=Z, priorvar.w=priorvar.w, Vinv=Vinv)
+          if (is.na(fbest)) {
             fbest= fval[i]= eBayes_logit_objective(w, msfit=ms, Z=Z, priorvar.w=priorvar.w, Vinv=Vinv)
-            #fbest= fval[i]= eBayes_em_logit_objective(w, msfit=ms, Z=Z, priorvar.w=priorvar.w, Vinv=Vinv)
             wbest= w
             if (verbose) message(paste("Done\n\n","Iter", "Objective fun", "Hyper-parameter", "\n", i, fval[i], paste(w, collapse=" "), "\n"))
+          }
+          if (fval[i+1] >= fval[i]) { noimprove= 0 } else { noimprove= noimprove + 1 }
+          if (fval[i+1] > fbest) { fbest= fval[i+1]; wbest= wnew }
+          found = (i >= niter.eBayes) || (maxstep < 0.01) || (noimprove > 1)
+        } else {
+          if (is.na(wbest)) {
+            wbest= w
+            if (verbose) message(paste("Done\n\n","Iter", "Hyper-parameter", "\n", i, paste(w, collapse=" "), "\n"))
+          }
+          found = (i >= niter.eBayes) || (maxstep < 0.01)
         }
-        if (fval[i+1] >= fval[i]) { noimprove= 0 } else { noimprove= noimprove + 1 }
-        if (fval[i+1] > fbest) { fbest= fval[i+1]; wbest= wnew }
         w= wnew
-        found = (i >= niter.eBayes) || (maxstep < 0.01) || (noimprove > 1)
         i= i + 1
-        if (verbose) message(paste(" ", i, fval[i], paste(w, collapse=" "), "\n"))
+        if (verbose) message(paste(" ", i, ifelse(msfun=="modelSelection", fval[i],""), paste(w, collapse=" "), "\n"))
     }
     # Run modelSelection with empirical Bayes prior probabilities
     if (verbose) message("Done. \n","Final MCMC with best hyper-parameter value... ")
     w= wbest
-    priorprob= 1 / (1 + exp(- Z %*% w))
+    # Obtain current prior inclusion probabilities
+    if ((msfun == "modelSelectionGGM") & (ncol(Z) == 1)) {
+      priorprob= as.vector(1 / (1 + exp(- w)))
+    } else {
+      priorprob= 1 / (1 + exp(- Z %*% w))
+    }
     priorModel= modelbinomprior(priorprob)
-    ms= modelSelection(priorModel=priorModel, niter=niter.mcmc, verbose=FALSE, ...)
+    if (msfun == "modelSelection") {
+      ms= modelSelection(priorModel=priorModel, niter=niter.mcmc, verbose=FALSE, ...)
+    } else {
+      ms= modelSelectionGGM(priorModel=priorModel, niter=niter.mcmc, verbose=FALSE, ...)
+    }
     ms$eBayes_hyperpar= w
     ms$Z= Z
     if (verbose) message("Done\n")
@@ -213,18 +297,20 @@ eBayes_fullrank_solve_modifiedlogistic <- function(a, c, w_initial, tol = 1e-3, 
 # - postprob: vector of length p with posterior probabilities for each covariate at current w
 # - priorvar.w: the prior on w is N(0, priorvar.w * V) where V= (Z^T Z/nrow(Z))^{-1}
 # Output: a list with the following components
-# - w: value of w
+# - w: value of w. Only returned if postprob is not missing
 # - fullrankcase: TRUE if Z satisfies the full-rank case conditions
 # - Uinv: inverse of U if fullrankcase==TRUE, and NULL otherwise
 eBayes_mstep_init= function(Z, postprob, priorvar.w=priorvar.w) {
-    if (is.vector(postprob)) postprob= matrix(postprob, ncol=1)
+    if (!missing(postprob)) {
+        if (is.vector(postprob)) postprob= matrix(postprob, ncol=1)
+    }
     U= unique(Z)
     wini= NULL
     fullrankcase= FALSE
     if (nrow(U) == ncol(U)) {
         Uinv= try(solve(U), silent=TRUE)
         if (!inherits(Uinv, "try-error")) {
-            wini= eBayes_mstep_fullrank(Z, Uinv=Uinv, postprob=postprob, priorvar.w=priorvar.w)
+            if (!missing(postprob)) wini= eBayes_mstep_fullrank(Z, Uinv=Uinv, postprob=postprob, priorvar.w=priorvar.w)
             fullrankcase= TRUE
         }
     }
@@ -237,13 +323,17 @@ eBayes_mstep_init= function(Z, postprob, priorvar.w=priorvar.w) {
     #    Uinv= try(solve(clusmeans[,-1]), silent=TRUE)
     #    if (!inherits(Uinv, "try-error")) wini= eBayes_mstep_fullrank(Zc, Uinv=Uinv, postprob=postprob, priorvar.w=priorvar.w)
     #}
-    if (is.null(wini)) {
-        logitpp= log((postprob + .001) / (1 - postprob + .001))
-        wini= coef(lm(logitpp ~ -1 + Z))
+    if (!missing(postprob)) {
+        if (is.null(wini)) {
+            logitpp= log((postprob + .001) / (1 - postprob + .001))
+            wini= matrix(coef(lm(logitpp ~ -1 + Z)), ncol=1)
+        }
+    } else {
+        wini= NULL
     }
     # Return output
     if (!fullrankcase) Uinv= NULL
-    ans= list(w= matrix(wini, ncol=1), fullrankcase= fullrankcase, Uinv= Uinv)
+    ans= list(w= wini, fullrankcase= fullrankcase, Uinv= Uinv)
     return(ans)
 }
 

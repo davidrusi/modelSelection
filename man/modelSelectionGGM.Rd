@@ -1,19 +1,19 @@
 \name{modelSelectionGGM}
 \alias{modelSelectionGGM}
+\alias{modelSelectionGGM_eBayes}
 %- Also NEED an '\alias' for EACH other topic documented here.
-\title{ Bayesian variable selection for linear models via non-local priors. }
+\title{ Bayesian variable selection for Gaussian graphical models }
 \description{
-  Bayesian model selection for linear, asymmetric linear,
-  median and quantile regression under
-  non-local or Zellner priors. p>>n can be handled.
 
-  modelSelection enumerates all models when feasible
-  and uses a Gibbs scheme otherwise.
-  See \code{coef} and \code{coefByModel} for estimates and posterior
-  intervals of regression coefficients, and \code{rnlp} for posterior samples.
+Bayesian model selection and averaging for Gaussian graphical models.
 
-  modelsearchBlockDiag seeks the highest posterior
-  probability model using an iterative block search.
+modelSelectionGGM performs standard BMS/BMA under the specified priors
+
+modelSelectionGGM_eBayes uses empirical Bayes to set edge prior inclusion
+  probabilities pi. By default a common prior inclusion probability is set
+  on all edges. If Z is specified, the edge inclusion probabilities can 
+  be regressed on meta-covariates Z via log(pi/(1-pi))= Z w.
+  
 }
 \usage{
 
@@ -26,6 +26,10 @@ save_proposal= FALSE, niter=10^3, burnin= round(niter/10),
 updates_per_iter= ceiling(sqrt(ncol(y))), updates_per_column= 10,
 sampler='Gibbs', pbirth=0.75, pdeath=0.5*(1-pbirth),
 bounds_LIT, Omegaini='glasso-ebic', verbose=TRUE)
+
+modelSelectionGGM_eBayes(Z, wini, niter.mcmc= 5000, 
+niter.mstep= 1000, niter.eBayes= 20, priorvar.w, 
+verbose=TRUE, ...)
 
 }
 \arguments{
@@ -112,6 +116,30 @@ bounds_LIT, Omegaini='glasso-ebic', verbose=TRUE)
   respectively. Alternatively, \code{Omegaini} can be a matrix}
 
   \item{verbose}{Set \code{verbose==TRUE} to print iteration progress}
+
+\item{Z}{p x q matrix containing the q meta-covariates for the p
+  covariates. An intercept is automatically added (including when
+  \code{Z} is missing)}
+
+\item{wini}{Optional. Initial value for the q-dimensional
+  hyper-parameter w}
+
+\item{niter.mcmc}{Number of iterations in the final MCMC,
+  run once after hyper-parameter estimates have been obtained}
+
+\item{niter.mstep}{Number of MCMC iterations in each M-step
+  required to update hyper-parameter estimates}
+
+\item{niter.eBayes}{Max number of iterations in the empirical
+  Bayes optimization algorithm. The algorithm also stop when
+  the objective function didn't improve in >=2 iterations}
+
+\item{priorvar.w}{Hyper-parameters w follow a prior
+  w ~ N(0, priorvar.w (Z^T Z/p)^(-1)) where priorvar.w is the prior
+  variance. By default is set such that all prior inclusion
+  probabilities lie in (0.001,0.999) with 0.95 prior probability}
+
+\item{...}{Further parameters passed onto \code{modelSelection}}
 
 }
 

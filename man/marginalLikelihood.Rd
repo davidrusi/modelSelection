@@ -43,8 +43,9 @@ optim_maxit, initpar='none', B=10^5, logscale=TRUE, XtX, ytX)
 \item{groups}{If variables in \code{x} such be added/dropped in groups,
   \code{groups} indicates the group that each variable corresponds to
   (by default each variable goes in a separate group)}
-\item{family}{Residual distribution. Possible values are
-  'normal','twopiecenormal','laplace', 'twopiecelaplace'}
+\item{family}{Parametric distribution family. Possible values include
+  'normal','laplace', 'binomial', 'poisson', see function 
+\code{modelSelection} for the full list}
 \item{priorCoef}{Prior on coefficients, created
   by \code{momprior}, \code{imomprior}, \code{emomprior} or
   \code{zellnerprior}.

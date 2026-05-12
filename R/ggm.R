@@ -417,3 +417,123 @@ huge.glasso = function(x, lambda = NULL, lambda.min.ratio = NULL, nlambda = NULL
   }
   return(fit)
 }
+
+
+
+
+## PRIOR ELICITATION ROUTINES
+
+
+
+# Obtain prior parameters s.t. separable random matrix Theta is positive-definite with prob 0.95
+# with theta[i,j] = 0 with prob 1 - edge_prob and theta[i,j] ~ N(0, sigma^2) otherwise
+#
+# - p : matrix dimension
+# - edge_prob: probability that off-diagonal Theta[i,j] is non-zero
+# - diag_distrib: if "fixed" then Theta[i,i] = diag_mean. If 'Exp' then Theta[i,i] ~ Exp(rate= 1/diag_mean)
+# - diag_mean: mean of the diagonal Theta[i,i]. By default it's set to 1 for diag_distrib == "fixed", and such that P(theta_{ii} >= 1) =0.95 for diag_distrib == "Exp"
+# - nsims: number of simulations
+#
+# Analytical lower-bound. Set sigma such that P(thetamin > 2.01 sigma sqrt(edge_prob p)) = 0.95, where thetamin is the minimum diagonal element.
+# If diag_distrib == 'Exp' with theta[i,i] ~ Exp(rate= 1/diag_mean[i]), then thetamin ~ Exp(rate= sum 1 / diag_mean)
+# If diag_distrib == 'fixed' then thetamin = min(diag(mean))
+#
+# Output
+# - diag_mean: equals the input parameter if it was non-missing. Otherwise, to its default value specified above
+# - offdiag_variance: sigma^2, i.e. variance of non-zero off-diagonal Theta[i,j] ~ N(0, edge_variance)
+randompdmatrix_setpars <- function(p, edge_prob, diag_distrib = 'Exp', diag_mean, method='analytical', nsims=1000) {
+  # Check input parameters
+  if (!method %in% c('analytical','MC')) stop("method must be 'analytical' or 'MC'")
+  diag_mean <- checkpars_pdmatrix_prob(p, diag_distrib, diag_mean, method)
+  # Obtain initial guess based on analytical lower-bound
+  if (diag_distrib == 'Exp') {
+    fexp= function(v) return((0.95 - pexp(2.01 * sqrt(v * edge_prob * p), rate= sum(1 / diag_mean), lower.tail=FALSE))^2)
+    offdiag_variance <- optim(par=1, fn=fexp, lower=0, upper=1, method="Brent")$par
+  } else {
+    offdiag_variance <- min(diag_mean)^2 / (2.01^2 * p * edge_prob)
+  }
+  # If method != 'analytical', estimate via Monte Carlo
+  if (method != 'analytical') {
+    logvseq <- seq(log(offdiag_variance/4), log(10000 * offdiag_variance), length=nsims)  #SD from 1/2 to 100 times the analytical value
+    prob_pd <- priorprob_pdmatrix(p=p, edge_prob=edge_prob, offdiag_variance=exp(logvseq), diag_mean=diag_mean, diag_distrib=diag_distrib, nsims=1)
+    b <- coef(glm(prob_pd ~ logvseq, family=binomial()))
+    vlow  <- -(log(1 / 0.975 - 1) + b[1])/b[2]
+    vup  <- -(log(1 / 0.925 - 1) + b[1])/b[2]
+    #vguess0  <- -(log(1 / 0.95 - 1) + b[1])/b[2]
+    logvseq <- seq(vlow, vup, length=nsims)  #SD within range of predicted prob of positive-def in [0.927, 0.975]
+    prob_pd <- priorprob_pdmatrix(p=p, edge_prob=edge_prob, offdiag_variance=exp(logvseq), diag_mean=diag_mean, diag_distrib=diag_distrib, nsims=1)
+    b <- coef(glm(prob_pd ~ logvseq, family=binomial()))
+    offdiag_variance  <- as.double(exp(-(log(1 / 0.95 - 1) + b[1])/b[2]))
+  }
+  ans <- list(diag_mean=diag_mean, offdiag_variance=offdiag_variance)
+  return(ans)
+}
+
+
+# Check input parameters of randompdmatrix_setpars, and return default diag_mean when missing
+checkpars_pdmatrix_prob <- function(p, diag_distrib, diag_mean, method) {
+  # Check input parameters
+  if (! diag_distrib %in% c('fixed','Exp')) stop("diag_distrib muse be 'fixed' or 'Exp'")
+  if (missing(diag_mean)) {
+    if (diag_distrib == 'fixed') {
+      diag_mean <- rep(1, p) 
+    } else {
+      # Since theta_{ii} ~ Exp(1/diag_mean), set diag_mean such that P(theta_{ii} >= 1)= pexp(1, rate=1/diag_mean, lower.tail=FALSE)= 0.95
+      diag_mean <- rep(1/0.052)
+    }
+  } else {
+    if (length(diag_mean) == 1) {
+      diag_mean = rep(diag_mean, p)
+    } else if (length(diag_mean) != p) {
+      stop("diag_mean must have length equal 1 or p")
+    }
+  }
+  return(diag_mean)
+}
+
+
+# Estimate the probability that a p x p separable symmetric random matrix Theta is positive-definite
+# - p : matrix dimension
+# - edge_prob: probability that off-diagonal Theta[i,j] is non-zero
+# - offdiag_variance: variance of non-zero off-diagonal Theta[i,j] ~ N(0, edge_variance)
+# - diag_mean: mean of the diagonal Theta[i,i]
+# - diag_distrib: if "fixed" then Theta[i,i] = diag_mean. If 'Exp' then Theta[i,i] ~ Exp(rate= 1/diag_mean)
+# - nsims: number of simulations
+# Output: Monte Carlo estimate of the probability that Theta is positive-definite
+priorprob_pdmatrix <- function(p, edge_prob, offdiag_variance, diag_mean, diag_distrib = 'Exp', nsims=5000) {
+  diag_mean <- checkpars_pdmatrix_prob(p, diag_distrib, diag_mean)
+  ans <- double(length(offdiag_variance))
+  for (j in 1:length(ans)) {
+    # Format input parameters
+    if (length(diag_mean) == 1) {
+      diag_mean = rep(diag_mean, p)
+    } else if (length(diag_mean) != p) {
+      stop("diag_mean must have length equal 1 or p")
+    }
+    if (! diag_distrib %in% c('fixed','Exp')) stop("diag_distrib muse be 'fixed' or 'Exp'")
+    # Simulate Theta
+    n_offdiag <- p * (p-1) / 2
+    Theta <- matrix(NA, nrow=p, ncol=p)
+    if (diag_distrib == 'fixed') diag(Theta) = diag_mean
+    pd <- logical(nsims)
+    for (i in 1:nsims) {
+      # Generate diagonal entries
+      if (diag_distrib == 'Exp') {
+        diag(Theta) = rexp(p, rate= 1/diag_mean)
+      }
+      # Generate off-diagonal
+      nonzero <- (runif(n_offdiag) < edge_prob)
+      Theta[upper.tri(Theta)][nonzero] <- rnorm(sum(nonzero), 0, sd=sqrt(offdiag_variance[j]))
+      Theta[upper.tri(Theta)][!nonzero] <- 0
+      Theta[lower.tri(Theta)] <- t(Theta)[lower.tri(Theta)]
+      # Check positive-definiteness
+      pd[i] <- (min(eigen(Theta)$values) > 0)
+    }
+    ans[j] <- mean(pd)
+  }
+  return(ans)
+}
+
+
+
+

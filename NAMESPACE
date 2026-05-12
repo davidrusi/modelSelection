@@ -82,5 +82,7 @@ export(ralapl, rnlp, rpostNIW)
 export(priorp2g)
 
 
+# Prior elicitation
 
+export(randompdmatrix_setpars)
 

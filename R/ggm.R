@@ -447,25 +447,49 @@ randompdmatrix_setpars <- function(p, edge_prob, diag_distrib = 'Exp', diag_mean
   diag_mean <- checkpars_pdmatrix_prob(p, diag_distrib, diag_mean, method)
   # Obtain initial guess based on analytical lower-bound
   if (diag_distrib == 'Exp') {
-    fexp= function(v) return((0.95 - pexp(2.01 * sqrt(v * edge_prob * p), rate= sum(1 / diag_mean), lower.tail=FALSE))^2)
+    fexp= function(v) return((log(0.95) - pexp(2.01 * sqrt(v * edge_prob * p), rate= sum(1 / diag_mean), lower.tail=FALSE, log.p=TRUE))^2)
+    #fexp= function(v) return((0.95 - pexp(2.01 * sqrt(v * edge_prob * p), rate= sum(1 / diag_mean), lower.tail=FALSE))^2)
     offdiag_variance <- optim(par=1, fn=fexp, lower=0, upper=1, method="Brent")$par
   } else {
     offdiag_variance <- min(diag_mean)^2 / (2.01^2 * p * edge_prob)
   }
   # If method != 'analytical', estimate via Monte Carlo
   if (method != 'analytical') {
-    logvseq <- seq(log(offdiag_variance/4), log(10000 * offdiag_variance), length=nsims)  #SD from 1/2 to 100 times the analytical value
-    prob_pd <- priorprob_pdmatrix(p=p, edge_prob=edge_prob, offdiag_variance=exp(logvseq), diag_mean=diag_mean, diag_distrib=diag_distrib, nsims=1)
-    b <- coef(glm(prob_pd ~ logvseq, family=binomial()))
-    vlow  <- -(log(1 / 0.975 - 1) + b[1])/b[2]
-    vup  <- -(log(1 / 0.925 - 1) + b[1])/b[2]
-    #vguess0  <- -(log(1 / 0.95 - 1) + b[1])/b[2]
-    logvseq <- seq(vlow, vup, length=nsims)  #SD within range of predicted prob of positive-def in [0.927, 0.975]
-    prob_pd <- priorprob_pdmatrix(p=p, edge_prob=edge_prob, offdiag_variance=exp(logvseq), diag_mean=diag_mean, diag_distrib=diag_distrib, nsims=1)
-    b <- coef(glm(prob_pd ~ logvseq, family=binomial()))
-    offdiag_variance  <- as.double(exp(-(log(1 / 0.95 - 1) + b[1])/b[2]))
+    if (p > 200) {
+      offdiag_variance <- randompdmatrix_setpars_extrapolate(p=p, edge_prob=edge_prob, diag_distrib=diag_distrib, diag_mean=diag_mean, nsims=nsims)$offdiag_variance
+    } else {
+      logvseq <- seq(log(offdiag_variance/4), log(10000 * offdiag_variance), length=nsims)  #SD from 1/2 to 100 times the analytical value
+      prob_pd <- priorprob_pdmatrix(p=p, edge_prob=edge_prob, offdiag_variance=exp(logvseq), diag_mean=diag_mean, diag_distrib=diag_distrib, nsims=1)
+      b <- coef(glm(prob_pd ~ logvseq, family=binomial()))
+      vlow  <- -(log(1 / 0.975 - 1) + b[1])/b[2]
+      vup  <- -(log(1 / 0.925 - 1) + b[1])/b[2]
+      #vguess0  <- -(log(1 / 0.95 - 1) + b[1])/b[2]
+      logvseq <- seq(vlow, vup, length=nsims)  #SD within range of predicted prob of positive-def in [0.927, 0.975]
+      prob_pd <- priorprob_pdmatrix(p=p, edge_prob=edge_prob, offdiag_variance=exp(logvseq), diag_mean=diag_mean, diag_distrib=diag_distrib, nsims=1)
+      b <- coef(glm(prob_pd ~ logvseq, family=binomial()))
+      offdiag_variance  <- as.double(exp(-(log(1 / 0.95 - 1) + b[1])/b[2]))
+    }
   }
   ans <- list(diag_mean=diag_mean, offdiag_variance=offdiag_variance)
+  return(ans)
+}
+
+# Same as randompdmatrix_setpars, using bias-corrected analytical guess of sigma to extrapolate to large p
+randompdmatrix_setpars_extrapolate <- function(p, edge_prob, diag_distrib = 'Exp', diag_mean, nsims=1000) {
+  diag_mean <- min(diag_mean)
+  # Obtain analytical and Monte Carlo estimates of sigma2
+  pseq = round(seq(10, 80, length=10))
+  sigma2_an = sigma2_mc = double(length(pseq))
+  for (i in 1:length(pseq)) {
+    sigma2_an[i] <- randompdmatrix_setpars(p=pseq[i], edge_prob=edge_prob, diag_mean=diag_mean, diag_distrib=diag_distrib, method="analytical")$offdiag_variance
+    sigma2_mc[i] <- randompdmatrix_setpars(p=pseq[i], edge_prob=edge_prob, diag_mean=diag_mean, diag_distrib=diag_distrib, method="MC", nsims=nsims)$offdiag_variance
+  }
+  # Estimate bias of the analytical estimate
+  b <- coef(lm(log(sigma2_an) - log(sigma2_mc) ~ pseq))
+  bias_pred <- as.double(b[1] + b[2] * p)
+  # Obtain bias-corrected analytical estimate
+  ans <- randompdmatrix_setpars(p=p, edge_prob=edge_prob, diag_mean=diag_mean, diag_distrib=diag_distrib, method="analytical")
+  ans$offdiag_variance <- exp(log(ans$offdiag_variance) - bias_pred)
   return(ans)
 }
 
@@ -501,7 +525,7 @@ checkpars_pdmatrix_prob <- function(p, diag_distrib, diag_mean, method) {
 # - nsims: number of simulations
 # Output: Monte Carlo estimate of the probability that Theta is positive-definite
 priorprob_pdmatrix <- function(p, edge_prob, offdiag_variance, diag_mean, diag_distrib = 'Exp', nsims=5000) {
-  diag_mean <- checkpars_pdmatrix_prob(p, diag_distrib, diag_mean)
+  diag_mean <- checkpars_pdmatrix_prob(p=p, diag_distrib=diag_distrib, diag_mean=diag_mean)
   ans <- double(length(offdiag_variance))
   for (j in 1:length(ans)) {
     # Format input parameters

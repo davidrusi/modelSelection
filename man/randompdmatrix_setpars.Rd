@@ -65,6 +65,9 @@ The process is then repeated: given the updated sigma,
 nsim new matrices are drawn around that sigma
 and a new logistic regression is fit to update sigma
 
+If p > 200, Monte Carlo can take too long so instead a bias-corrected
+version of the analytical estimate is used
+
 }
 \value{
 

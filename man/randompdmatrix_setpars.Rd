@@ -29,9 +29,15 @@ randompdmatrix_setpars(p, edge_prob, diag_distrib = 'Exp', diag_mean, method='an
 
 \item{edge_prob}{Probability that off-diagonal Theta[i,j] is non-zero}
 
-\item{diag_distrib}{If "fixed" then Theta[i,i] = diag_mean. If "Exp" then Theta[i,i] ~ Exp(rate= 1/diag_mean)}
+\item{diag_distrib}{If "fixed" then Theta[i,i] = diag_mean. 
+If "Exp" then Theta[i,i] ~ Exp(rate= 1/diag_mean)}
 
-\item{diag_mean}{Mean of the diagonal Theta[i,i]. By default it's set to 1 for diag_distrib == "fixed", and such that P(theta_{ii} >= 1) =0.95 for diag_distrib == "Exp"}
+\item{diag_mean}{Mean of the diagonal Theta[i,i]. By default it's set 
+to 1 for diag_distrib == "fixed", 
+and such that P(theta[i,i] >= 1) =0.95 for diag_distrib == "Exp"}
+
+\item{method}{Set to "MC" to estimate the probability exactly,
+"analytical" for an asymptotic guess. See the details section.}
 
 \item{nsims}{Number of simulations}
 

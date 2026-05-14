@@ -37,12 +37,16 @@ verbose=TRUE, ...)
   \item{y}{Data matrix}
   
   \item{priorCoef}{Prior on off-diagonal entries of the precision
-    matrix, conditional on their not being zero (slab)}
+    matrix, conditional on their not being zero (slab). See details}
   
   \item{priorModel}{Prior probabilities on having non-zero diagonal
-    entries}
+    entries. Possible priors are modelbinomprior() and modelbbprior().
+    See details. 
+    See also \code{modelSelectionGGM_eBayes} for an empirical Bayes 
+    model prior}
   
-  \item{priorDiag}{Prior on diagonal entries of the precision matrix}
+  \item{priorDiag}{Prior on diagonal entries of the precision matrix.
+  See details.}
   
   \item{center}{If \code{TRUE}, the columns of \code{y} will be centered
     to zero mean}
@@ -151,12 +155,17 @@ verbose=TRUE, ...)
   positive-definiteness truncation is added.
   
   The prior on diagonal entries Omega[j,j] is given by \code{priorDiag}.
+  Specificaly, if priorDiag = exponentialprior(lambda) then 
+  the prior is Omega[j,j] ~ Exp(lambda).
+
   Off-diagonal Omega[j,k] are equal to zero with probability given by
-  \code{modelPrior} and, when non-zero, they are
-  
-  Independent spike-and-slab priors are set on the off-diagonal entries of 
-  Omega, i.e. Omega[j,k]=0 with positive probability (spike) and otherwise
+  \code{modelPrior} and otherwise
   arises from the distribution indicated in \code{priorCoef} (slab).
+  If priorCoef == normalidprior(tau) then Omega[j,k] ~ N(0, var=tau).
+
+  If modelPrior == modelbinomprior(p) then Omega[j,k] = 0 
+  with probability p independently across j < k.
+  If modelPrior == modelbbprior(a,b) then p ~ Beta(a,b).
 
   Inference is based on MCMC posterior sampling. All sampling algorithms
   proceed by updating Omega[,k] given y and Omega[,-k]

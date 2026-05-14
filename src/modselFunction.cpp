@@ -781,6 +781,15 @@ double modselFunction::BIC(double *fopt, int *n) {
 }
 
 
+double modselFunction::infocriteria(double *fopt, double *penalty) {
+  double ans;
+
+  ans= - (*fopt) - 0.5 * (this->thlength) * (*penalty);
+
+  return ans;
+}
+
+
 
 /* APPROXIMATE LAPLACE APPROXIMATION */
 

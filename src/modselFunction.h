@@ -120,7 +120,8 @@ public:
   double laplaceapprox(double *thopt, std::map<string, double *> *funargs);
 
   //BIC APPROXIMATION TO int exp(-fun(th)) dth
-  double BIC(double *fopt, int *n);
+  double BIC(double *fopt, int *n);   // Returns - fopt - 0.5 * p * log(n)
+  double infocriteria(double *fopt, double *penalty);  // Returns - fopt - 0.5 * p * penalty
 
   //APPROXIMATE LAPLACE APPROXIMATION TO int exp(-fun(th)) dth
   double ALA(double *th0, double *f0, double *g0, double **H0, double **cholH0, double **H0inv, bool returng0, bool returnH0, double adjfactor, std::map<string, double *> *funargs); 

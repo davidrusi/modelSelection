@@ -157,8 +157,16 @@ double marginal_glm(int *sel, int *nsel, lmObject *lm) {
       free_dvector(g, 1, thlength);
 
     } else {
+      
+      double penalty;
+      if (*(lm->tau) >= 0) {
+        penalty= *(lm->tau); //if tau>=0, it stores the information criteria's penalty on dimension
+      } else {
+        penalty= log(*(lm->n));   //if tau<0, use the BIC penalty
+      }
 
-      ans= msfun->BIC(&fopt, lm->n);
+      ans= msfun->infocriteria(&fopt, &penalty);
+      //ans= msfun->BIC(&fopt, lm->n);
 
     }
 

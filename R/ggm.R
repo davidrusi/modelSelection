@@ -444,7 +444,7 @@ huge.glasso = function(x, lambda = NULL, lambda.min.ratio = NULL, nlambda = NULL
 randompdmatrix_setpars <- function(p, edge_prob, diag_distrib = 'Exp', diag_mean, method='analytical', nsims=1000) {
   # Check input parameters
   if (!method %in% c('analytical','MC')) stop("method must be 'analytical' or 'MC'")
-  diag_mean <- checkpars_pdmatrix_prob(p, diag_distrib, diag_mean, method)
+  diag_mean <- checkpars_pdmatrix_prob(p=p, diag_distrib=diag_distrib, diag_mean=diag_mean, method=method)
   # Obtain initial guess based on analytical lower-bound
   if (diag_distrib == 'Exp') {
     fexp= function(v) return((log(0.95) - pexp(2.01 * sqrt(v * edge_prob * p), rate= sum(1 / diag_mean), lower.tail=FALSE, log.p=TRUE))^2)
@@ -502,8 +502,11 @@ checkpars_pdmatrix_prob <- function(p, diag_distrib, diag_mean, method) {
     if (diag_distrib == 'fixed') {
       diag_mean <- rep(1, p) 
     } else {
-      # Since theta_{ii} ~ Exp(1/diag_mean), set diag_mean such that P(theta_{ii} >= 1)= pexp(1, rate=1/diag_mean, lower.tail=FALSE)= 0.95
-      diag_mean <- rep(1/0.052)
+      # Since theta_{ii} ~ Exp(1/diag_mean), set diag_mean such that P(theta_{ii} >= 1)= 0.99
+      diag_mean <- rep(1/0.01, p) # for 0.99 tail prob
+      #diag_mean <- rep(1/0.052, p) # for 0.95 tail prob
+      # Since min_i theta_{ii} ~ Exp(p/diag_mean), setting diag_mean/p= 1/0.01 achieves P(min_i theta_{ii} >= 1) = 0.99
+      # diag_mean <- rep(p/0.01, p)
     }
   } else {
     if (length(diag_mean) == 1) {

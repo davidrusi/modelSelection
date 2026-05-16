@@ -1,7 +1,6 @@
 VERSION 1.0.7
 - Fixed bug in bestIC, bestAIC, bestEBIC for glms (logistic and poisson
 regression)
-- Added randompdmatrix_setpars
 - Fixed typo in help(marginalLikelihood) regarding choices for argument
 'family'
 

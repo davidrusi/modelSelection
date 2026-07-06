@@ -36,7 +36,7 @@ using namespace Eigen;
 
 //Functions implementing MCMC
 
-List modelSelectionGGMC(NumericMatrix y, List prCoef, List prModel, List samplerPars, arma::sp_mat Omegaini);
+//List modelSelectionGGMC(NumericMatrix y, int nrowy, int ncoly, List prCoef, List prModel, List samplerPars, arma::sp_mat Omegaini);
 
 void GGM_MHwithinGibbs(arma::sp_mat *samples, arma::mat *postmean, arma::Mat<int> *postmeancount, arma::mat *margpp, arma::Mat<int> *margppcount, double *prop_accept, ggmObject *ggm, arma::sp_mat *Omegaini);
 

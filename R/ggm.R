@@ -90,7 +90,9 @@ modelSelectionGGM= function(y, priorCoef=normalidprior(tau=1), priorModel=modelb
   if (!is.matrix(y)) y = as.matrix(y)
   p= ncol(y);
   if (p <=1) stop("y must have at least 2 columns")
-  if (!is.numeric(y)) stop("y must be numeric")
+  if (!is.numeric(y) && nrow(y)>0) stop("y must be numeric")
+  n = nrow(y)
+  if (n == 0) y = matrix(0, nrow=1, ncol=p) # ensure that y is valid when passing to C++
   if (!(sampler %in% c('Gibbs','birthdeath','LIT'))) stop("sampler must be 'Gibbs', 'birthdeath', or 'LIT'")
   if (tempering < 0) stop("tempering cannot be negative")
   y = scale(y, center=center, scale=scale)
@@ -107,19 +109,19 @@ modelSelectionGGM= function(y, priorCoef=normalidprior(tau=1), priorModel=modelb
     
   #Initial value for sampler
   if (verbose) message(" Obtaining initial parameter estimate...")
-  Omegaini= initialEstimateGGM(y, Omegaini)
+  Omegaini= initialEstimateGGM(y, n=n, Omegaini=Omegaini)
   if (verbose) message(" Done\n")
     
   #Call C++ function
   proposal= proposaldensity= NULL
   if (global_proposal == 'none') {
-    ans= modelSelectionGGMC(y, prCoef, prModel, samplerPars, Omegaini)
+    ans= modelSelectionGGMC(y, n, p, prCoef, prModel, samplerPars, Omegaini)
     postSample= Matrix::t(ans$postSample)
     postmean = ans$postmean
     margpp= ans$margpp
     prop_accept= ans$prop_accept
   } else {
-    ans= modelSelectionGGM_globalC(y, prCoef, prModel, samplerPars, Omegaini)
+    ans= modelSelectionGGM_globalC(y, n, p, prCoef, prModel, samplerPars, Omegaini)
     postSample= Matrix::t(ans[[1]])
     postmean= ans[[2]]
     margpp= ans[[3]]
@@ -180,18 +182,27 @@ dmvnorm_prec <- function(x, sigmainv, logdet.sigmainv, mu = rep(0, ncol(sigmainv
 }
 
 #Initial estimate of precision matrix
-initialEstimateGGM= function(y, Omegaini) {
+initialEstimateGGM= function(y, n, Omegaini) {
+
+  if (n == 0) {  # case where we want to sample from prior
+
+    # init to identity matrix
+    ans= Matrix::sparseMatrix(seq_len(ncol(y)), seq_len(ncol(y)), x=rep(1,ncol(y)), dims=c(ncol(y),ncol(y)))
+
+  } else {             # case where we want to sample from posterior
     
-  if (is.character(Omegaini)) {
-    ans= initGGM(y, Omegaini)
-  } else {
-    if (ncol(Omegaini) != nrow(Omegaini)) stop("Omegaini must be a square matrix")
-    if (ncol(y) != ncol(Omegaini)) stop("ncol(Omegaini) must be equal to ncol(y)")
-    if (inherits(Omegaini, "matrix")) {
-    ans= Matrix::Matrix(Omegaini, sparse=TRUE)
-  } else if (inherits(Omegaini, c("dgCMatrix", "ddiMatrix", "dsCMatrix"))) {
-    ans= Omegaini
-  } else stop("Invalid Omegaini. It must be of class matrix, dgCMatrix, dsCMatrix or ddiMatrix")
+    if (is.character(Omegaini)) {
+      ans= initGGM(y, Omegaini)
+    } else {
+      if (ncol(Omegaini) != nrow(Omegaini)) stop("Omegaini must be a square matrix")
+      if (ncol(y) != ncol(Omegaini)) stop("ncol(Omegaini) must be equal to ncol(y)")
+      if (inherits(Omegaini, "matrix")) {
+      ans= Matrix::Matrix(Omegaini, sparse=TRUE)
+    } else if (inherits(Omegaini, c("dgCMatrix", "ddiMatrix", "dsCMatrix"))) {
+      ans= Omegaini
+    } else stop("Invalid Omegaini. It must be of class matrix, dgCMatrix, dsCMatrix or ddiMatrix")
+    }
+
   }
   return(ans)
     
@@ -620,10 +631,12 @@ checkpars_pdmatrix_prob <- function(p, diag_distrib, diag_mean, method) {
 # - diag_mean: mean of the diagonal Theta[i,i]
 # - diag_distrib: if "fixed" then Theta[i,i] = diag_mean. If 'Exp' then Theta[i,i] ~ Exp(rate= 1/diag_mean)
 # - nsims: number of simulations
-# Output: Monte Carlo estimate of the probability that Theta is positive-definite
-priorprob_pdmatrix <- function(p, edge_prob, offdiag_variance, diag_mean, diag_distrib = 'Exp', nsims=5000) {
+# - returnMatrix: if TRUE, the simulated matrices are also returned (only the +def ones)
+# Output: Monte Carlo estimate of the probability that Theta is positive-definite.
+priorprob_pdmatrix <- function(p, edge_prob, offdiag_variance, diag_mean, diag_distrib = 'Exp', nsims=5000, returnMatrix=FALSE) {
   diag_mean <- checkpars_pdmatrix_prob(p=p, diag_distrib=diag_distrib, diag_mean=diag_mean)
   ans <- double(length(offdiag_variance))
+  if (returnMatrix) Thetasim <- lapply(1:length(ans), function(z) vector("list", nsims))
   for (j in 1:length(ans)) {
     # Format input parameters
     if (length(diag_mean) == 1) {
@@ -649,9 +662,12 @@ priorprob_pdmatrix <- function(p, edge_prob, offdiag_variance, diag_mean, diag_d
       Theta[lower.tri(Theta)] <- t(Theta)[lower.tri(Theta)]
       # Check positive-definiteness
       pd[i] <- (min(eigen(Theta)$values) > 0)
+      # Store matrix
+      if (returnMatrix & pd[i]) Thetasim[[j]][[i]] <- Theta
     }
     ans[j] <- mean(pd)
   }
+  if (returnMatrix) ans <- list(prob_posdef = ans, Theta = Thetasim)
   return(ans)
 }
 

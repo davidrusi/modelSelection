@@ -7,15 +7,19 @@ using namespace std;
 //*************************************************************************************
 
 //Constructor
-ggmObject::ggmObject(arma::mat *y, List prCoef, List prModel, List samplerPars, bool use_tempering, bool computeS=true) {
+ggmObject::ggmObject(arma::mat *y, int *nrowy, List prCoef, List prModel, List samplerPars, bool use_tempering, bool computeS=true) {
 
   //Data summaries
-  this->n= y->n_rows;
+  this->n= (*nrowy);
   this->ncol= y->n_cols;
   this->nedges= (this->ncol) * (this->ncol -1) / 2;
 
   if (computeS) {
-    this->S= (*y).t() * (*y);
+    if (this->n > 0) {
+      this->S= (*y).t() * (*y);
+    } else {
+      this->S = arma::mat(this->ncol, this->ncol, arma::fill::zeros); //ncol x ncol matrix full of zeroes
+    }
   } else {
     Rf_error("Error in ggmObject. Currently computeS must be set to true");
   }

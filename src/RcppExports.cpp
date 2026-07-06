@@ -104,32 +104,36 @@ BEGIN_RCPP
 END_RCPP
 }
 // modelSelectionGGMC
-List modelSelectionGGMC(arma::mat y, List prCoef, List prModel, List samplerPars, arma::sp_mat Omegaini);
-RcppExport SEXP _modelSelection_modelSelectionGGMC(SEXP ySEXP, SEXP prCoefSEXP, SEXP prModelSEXP, SEXP samplerParsSEXP, SEXP OmegainiSEXP) {
+List modelSelectionGGMC(arma::mat y, int nrowy, int ncoly, List prCoef, List prModel, List samplerPars, arma::sp_mat Omegaini);
+RcppExport SEXP _modelSelection_modelSelectionGGMC(SEXP ySEXP, SEXP nrowySEXP, SEXP ncolySEXP, SEXP prCoefSEXP, SEXP prModelSEXP, SEXP samplerParsSEXP, SEXP OmegainiSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< arma::mat >::type y(ySEXP);
+    Rcpp::traits::input_parameter< int >::type nrowy(nrowySEXP);
+    Rcpp::traits::input_parameter< int >::type ncoly(ncolySEXP);
     Rcpp::traits::input_parameter< List >::type prCoef(prCoefSEXP);
     Rcpp::traits::input_parameter< List >::type prModel(prModelSEXP);
     Rcpp::traits::input_parameter< List >::type samplerPars(samplerParsSEXP);
     Rcpp::traits::input_parameter< arma::sp_mat >::type Omegaini(OmegainiSEXP);
-    rcpp_result_gen = Rcpp::wrap(modelSelectionGGMC(y, prCoef, prModel, samplerPars, Omegaini));
+    rcpp_result_gen = Rcpp::wrap(modelSelectionGGMC(y, nrowy, ncoly, prCoef, prModel, samplerPars, Omegaini));
     return rcpp_result_gen;
 END_RCPP
 }
 // modelSelectionGGM_globalC
-List modelSelectionGGM_globalC(arma::mat y, List prCoef, List prModel, List samplerPars, arma::sp_mat Omegaini);
-RcppExport SEXP _modelSelection_modelSelectionGGM_globalC(SEXP ySEXP, SEXP prCoefSEXP, SEXP prModelSEXP, SEXP samplerParsSEXP, SEXP OmegainiSEXP) {
+List modelSelectionGGM_globalC(arma::mat y, int nrowy, int ncoly, List prCoef, List prModel, List samplerPars, arma::sp_mat Omegaini);
+RcppExport SEXP _modelSelection_modelSelectionGGM_globalC(SEXP ySEXP, SEXP nrowySEXP, SEXP ncolySEXP, SEXP prCoefSEXP, SEXP prModelSEXP, SEXP samplerParsSEXP, SEXP OmegainiSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< arma::mat >::type y(ySEXP);
+    Rcpp::traits::input_parameter< int >::type nrowy(nrowySEXP);
+    Rcpp::traits::input_parameter< int >::type ncoly(ncolySEXP);
     Rcpp::traits::input_parameter< List >::type prCoef(prCoefSEXP);
     Rcpp::traits::input_parameter< List >::type prModel(prModelSEXP);
     Rcpp::traits::input_parameter< List >::type samplerPars(samplerParsSEXP);
     Rcpp::traits::input_parameter< arma::sp_mat >::type Omegaini(OmegainiSEXP);
-    rcpp_result_gen = Rcpp::wrap(modelSelectionGGM_globalC(y, prCoef, prModel, samplerPars, Omegaini));
+    rcpp_result_gen = Rcpp::wrap(modelSelectionGGM_globalC(y, nrowy, ncoly, prCoef, prModel, samplerPars, Omegaini));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -559,8 +563,8 @@ static const R_CallMethodDef CallEntries[] = {
     {"_modelSelection_rtmvnormProdCI", (DL_FUNC) &_modelSelection_rtmvnormProdCI, 9},
     {"_modelSelection_rnlpPostCI_lm", (DL_FUNC) &_modelSelection_rnlpPostCI_lm, 11},
     {"_modelSelection_rnlpCI", (DL_FUNC) &_modelSelection_rnlpCI, 9},
-    {"_modelSelection_modelSelectionGGMC", (DL_FUNC) &_modelSelection_modelSelectionGGMC, 5},
-    {"_modelSelection_modelSelectionGGM_globalC", (DL_FUNC) &_modelSelection_modelSelectionGGM_globalC, 5},
+    {"_modelSelection_modelSelectionGGMC", (DL_FUNC) &_modelSelection_modelSelectionGGMC, 7},
+    {"_modelSelection_modelSelectionGGM_globalC", (DL_FUNC) &_modelSelection_modelSelectionGGM_globalC, 7},
     {"_modelSelection_hugeglasso", (DL_FUNC) &_modelSelection_hugeglasso, 5},
     {"_modelSelection_marginalLikelihoodCI", (DL_FUNC) &_modelSelection_marginalLikelihoodCI, 40},
     {"_modelSelection_normalmixGibbsCI", (DL_FUNC) &_modelSelection_normalmixGibbsCI, 13},

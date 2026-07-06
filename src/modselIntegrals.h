@@ -23,7 +23,7 @@ public:
 
   //Constructor and destructor
 
-  ggmObject(arma::mat *y, List prCoef, List prModel, List samplerPars, bool use_tempering, bool computeS);
+  ggmObject(arma::mat *y, int *nrowy, List prCoef, List prModel, List samplerPars, bool use_tempering, bool computeS);
   ggmObject(ggmObject *ggm);
   ~ggmObject();
 

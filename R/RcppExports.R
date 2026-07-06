@@ -21,12 +21,12 @@ rnlpCI <- function(niter, burnin, thinning, m, V, p, r, tau, prior) {
     .Call(`_modelSelection_rnlpCI`, niter, burnin, thinning, m, V, p, r, tau, prior)
 }
 
-modelSelectionGGMC <- function(y, prCoef, prModel, samplerPars, Omegaini) {
-    .Call(`_modelSelection_modelSelectionGGMC`, y, prCoef, prModel, samplerPars, Omegaini)
+modelSelectionGGMC <- function(y, nrowy, ncoly, prCoef, prModel, samplerPars, Omegaini) {
+    .Call(`_modelSelection_modelSelectionGGMC`, y, nrowy, ncoly, prCoef, prModel, samplerPars, Omegaini)
 }
 
-modelSelectionGGM_globalC <- function(y, prCoef, prModel, samplerPars, Omegaini) {
-    .Call(`_modelSelection_modelSelectionGGM_globalC`, y, prCoef, prModel, samplerPars, Omegaini)
+modelSelectionGGM_globalC <- function(y, nrowy, ncoly, prCoef, prModel, samplerPars, Omegaini) {
+    .Call(`_modelSelection_modelSelectionGGM_globalC`, y, nrowy, ncoly, prCoef, prModel, samplerPars, Omegaini)
 }
 
 hugeglasso <- function(S, lambda, scr, verbose, cov_output) {

@@ -97,11 +97,11 @@ void print_mat( mat_type A ) {
 
 
 // [[Rcpp::export]]
-List modelSelectionGGMC(arma::mat y, List prCoef, List prModel, List samplerPars, arma::sp_mat Omegaini) {
+List modelSelectionGGMC(arma::mat y, int nrowy, int ncoly, List prCoef, List prModel, List samplerPars, arma::sp_mat Omegaini) {
   bool use_tempering= false;
   double prop_accept;
   ggmObject *ggm;
-  ggm= new ggmObject(&y, prCoef, prModel, samplerPars, use_tempering, true);
+  ggm= new ggmObject(&y, &nrowy, prCoef, prModel, samplerPars, use_tempering, true);
 
   int p= ggm->ncol, npars= p*(p+1)/2;
 
@@ -288,7 +288,7 @@ void GGM_MHwithinGibbs(arma::sp_mat *samples, arma::mat *postmean, arma::Mat<int
 
 
 // [[Rcpp::export]]
-List modelSelectionGGM_globalC(arma::mat y, List prCoef, List prModel, List samplerPars, arma::sp_mat Omegaini) {
+List modelSelectionGGM_globalC(arma::mat y, int nrowy, int ncoly, List prCoef, List prModel, List samplerPars, arma::sp_mat Omegaini) {
 /* Interface for GGM_MHwithinGibbs_global and GGM_MHwithinGibbs_onlyglobal to be called from R 
 
    Output: list with p+2 elements. 
@@ -300,7 +300,7 @@ List modelSelectionGGM_globalC(arma::mat y, List prCoef, List prModel, List samp
 
   bool use_tempering= true;
   ggmObject *ggm;
-  ggm= new ggmObject(&y, prCoef, prModel, samplerPars, use_tempering, true);
+  ggm= new ggmObject(&y, &nrowy, prCoef, prModel, samplerPars, use_tempering, true);
 
   int j, niter= ggm->niter, p= ggm->ncol, burnin= ggm->burnin, npars= p*(p+1)/2;
   double *dpropini, prop_accept;

@@ -6,6 +6,10 @@
 
 plot.msfit_ggm= function(x, y, ...) {
   postSample= x$postSample[,x$indexes[1,] != x$indexes[2,],drop=FALSE]
+  if (ncol(postSample) > 500) {
+    postSample = postSample[,1:500]
+    message("Due to the problem dimension, only the first 500 non-diagonal elements are plotted")
+  }
   margppcum= apply(postSample !=0, 2, cumsum) / seq_len(nrow(postSample))
   plot(margppcum[,1], type='l', ylim=c(0,1), xlab='Iteration', ylab='Marginal posterior inclusion probabilities')
   if (ncol(margppcum)>1) for (i in 2:min(5000,ncol(margppcum))) lines(margppcum[,i])

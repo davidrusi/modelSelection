@@ -550,22 +550,27 @@ huge.glasso = function(x, lambda = NULL, lambda.min.ratio = NULL, nlambda = NULL
 #\keyword{ distribution }
 
 
-randompdmatrix_setpars <- function(p, edge_prob, diag_distrib = 'Exp', diag_mean, method='analytical', nsims=1000) {
+randompdmatrix_setpars <- function(p, edge_prob, edge_prob_priorsucc, edge_prob_priorfail, diag_distrib = 'Exp', diag_mean, method='analytical', nsims=1000) {
   # Check input parameters
   if (!method %in% c('analytical','MC')) stop("method must be 'analytical' or 'MC'")
   diag_mean <- checkpars_pdmatrix_prob(p=p, diag_distrib=diag_distrib, diag_mean=diag_mean, method=method)
+  if (missing(edge_prob)) {
+    edge_prob <- rbeta(nsims, shape1=edge_prob_priorsucc, shape2=edge_prob_priorfail)
+    edge_prob_mean <- edge_prob_priorsucc / (edge_prob_priorsucc + edge_prob_priorfail)
+  } else {
+    edge_prob_mean <- edge_prob
+  }
   # Obtain initial guess based on analytical lower-bound
   if (diag_distrib == 'Exp') {
-    fexp= function(v) return((log(0.95) - pexp(2.01 * sqrt(v * edge_prob * p), rate= sum(1 / diag_mean), lower.tail=FALSE, log.p=TRUE))^2)
-    #fexp= function(v) return((0.95 - pexp(2.01 * sqrt(v * edge_prob * p), rate= sum(1 / diag_mean), lower.tail=FALSE))^2)
+    fexp= function(v) return((log(0.95) - pexp(2.01 * sqrt(v * edge_prob_mean * p), rate= sum(1 / diag_mean), lower.tail=FALSE, log.p=TRUE))^2)
     offdiag_variance <- optim(par=1, fn=fexp, lower=0, upper=1, method="Brent")$par
   } else {
-    offdiag_variance <- min(diag_mean)^2 / (2.01^2 * p * edge_prob)
+    offdiag_variance <- min(diag_mean)^2 / (2.01^2 * p * edge_prob_mean)
   }
   # If method != 'analytical', estimate via Monte Carlo
   if (method != 'analytical') {
     if (p > 200) {
-      offdiag_variance <- randompdmatrix_setpars_extrapolate(p=p, edge_prob=edge_prob, diag_distrib=diag_distrib, diag_mean=diag_mean, nsims=nsims)$offdiag_variance
+      offdiag_variance <- randompdmatrix_setpars_extrapolate(p=p, edge_prob=edge_prob_mean, diag_distrib=diag_distrib, diag_mean=diag_mean, nsims=nsims)$offdiag_variance
     } else {
       logvseq <- seq(log(offdiag_variance/4), log(10000 * offdiag_variance), length=nsims)  #SD from 1/2 to 100 times the analytical value
       prob_pd <- priorprob_pdmatrix(p=p, edge_prob=edge_prob, offdiag_variance=exp(logvseq), diag_mean=diag_mean, diag_distrib=diag_distrib, nsims=1)
@@ -639,6 +644,7 @@ checkpars_pdmatrix_prob <- function(p, diag_distrib, diag_mean, method) {
 # Output: Monte Carlo estimate of the probability that Theta is positive-definite.
 priorprob_pdmatrix <- function(p, edge_prob, offdiag_variance, diag_mean, diag_distrib = 'Exp', nsims=5000, returnMatrix=FALSE) {
   diag_mean <- checkpars_pdmatrix_prob(p=p, diag_distrib=diag_distrib, diag_mean=diag_mean)
+  if (length(edge_prob) == 1) edge_prob <- rep(edge_prob, nsims)
   ans <- double(length(offdiag_variance))
   if (returnMatrix) Thetasim <- lapply(1:length(ans), function(z) vector("list", nsims))
   for (j in 1:length(ans)) {
@@ -660,7 +666,7 @@ priorprob_pdmatrix <- function(p, edge_prob, offdiag_variance, diag_mean, diag_d
         diag(Theta) = rexp(p, rate= 1/diag_mean)
       }
       # Generate off-diagonal
-      nonzero <- (runif(n_offdiag) < edge_prob)
+      nonzero <- (runif(n_offdiag) < edge_prob[i])
       Theta[upper.tri(Theta)][nonzero] <- rnorm(sum(nonzero), 0, sd=sqrt(offdiag_variance[j]))
       Theta[upper.tri(Theta)][!nonzero] <- 0
       Theta[lower.tri(Theta)] <- t(Theta)[lower.tri(Theta)]

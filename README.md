@@ -18,10 +18,11 @@ devtools::install_github("davidrusi/mombf")
 The main Bayesian model selection (BMS) function is `modelSelection`. For information criteria
 consider `bestBIC`, `bestEBIC`, `bestAIC`, `bestIC`. 
 Bayesian model averaging (BMA) is also available for some models,
-mainly linear and generalized linear models.
+mainly linear regression, generalized linear models (GLMs) 
+and generalized additive models (GAMs).
 Local variable selection is implemented in `localnulltest` and `localnulltest_fda`.
-Details are in [`mombf`'s vignette](https://CRAN.R-project.org/package=mombf/vignettes/mombf.pdf),
-here we illustrate quickly how to get posterior model probabilities,
+
+Here we illustrate quickly how to get posterior model probabilities,
 marginal posterior inclusion probabilities, BMA point estimates and posterior
 intervals for the regression coefficients and predicted outcomes.
 

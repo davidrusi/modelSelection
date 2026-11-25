@@ -331,6 +331,8 @@ coef(fit1) #BMA estimates, 95% intervals, marginal post prob
 
 postProb(fit1) #posterior model probabilities
 
+postProbPlot(fit1) #plot posterior model probabilities
+
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

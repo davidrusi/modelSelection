@@ -19,7 +19,7 @@ plot.msfit= function(x, y, ...) {
 setMethod("show", signature(object='msfit'), function(object) {
   cat('msfit object with outcome of type ',object$outcometype,', ',object$p,' covariates and ',object$family,' error distribution\n')
   ifelse(any(object$postMode!=0), paste('  Posterior mode: covariate ',which(object$postMode==1)), '  Posterior mode: null model')
-  cat("Use postProb() to get posterior model probabilities\n")
+  cat("Use postProb() and postProbPlot() to get posterior model probabilities\n")
   cat("Use coef() or predict() to get BMA estimates and intervals for parameters or given covariate values\n")
   cat("Elements $margpp, $postMode, $postSample and $coef contain further information (see help('msfit') and help('modelSelection') for details)\n")
 }
@@ -314,6 +314,77 @@ if (!is.null(object$models)) {
   ans= modelpp[,c('modelid','family','pp')]
 }
 return(ans)
+}
+)
+
+
+# Produce plot of posterior model probabilities, with variables in the x-axis and cumulative probabilities in the y-axis
+setMethod("postProbPlot", signature(object='msfit'), function(object, nmax, method='norm', sort_variables=TRUE, max_variables) {
+
+  pp <- postProb(object)
+  top_k <- ifelse(missing(nmax), nrow(pp), min(nmax, nrow(pp)))
+  groups <- object$groups
+  nn <- colnames(object$xstd)
+  intercept_idx <- which(nn == "(Intercept)" | is.na(groups))
+
+  group_names <- tapply(nn, groups, function(x) {
+    if (length(x) == 1) return(x)
+    chars <- strsplit(x, "")
+    min_len <- min(lengths(chars))
+    same <- vapply(seq_len(min_len), function(i) length(unique(vapply(chars, `[`, "", i))) == 1, logical(1))
+    prefix_len <- if (all(same)) min_len else which.min(same) - 1
+    stem <- sub("[._-]+$", "", substr(x[1], 1, prefix_len))
+    if (nzchar(stem)) stem else paste(x, collapse = "/")
+  })
+
+  models_df <- pp[seq_len(top_k), , drop = FALSE] |>
+    mutate(model_rank = row_number(), xmax = cumsum(.data$pp), xmin = c(0, .data$xmax[-length(.data$xmax)]))
+
+
+  # Map model indices to group names stemmed from `nn`
+  plot_df <- separate_longer_delim(models_df, "modelid", delim = ",") |>
+    dplyr::filter(nzchar(.data$modelid)) |>
+    mutate(var_idx = as.integer(.data$modelid)) |>
+    dplyr::filter(!is.na(.data$var_idx), !.data$var_idx %in% intercept_idx) |>
+    mutate(grp = groups[.data$var_idx], var_name = unname(group_names[as.character(.data$grp)])) |>
+    dplyr::filter(!is.na(.data$var_name)) |>
+    distinct(.data$model_rank, .data$grp, .keep_all = TRUE)
+
+  # Identify top variables by marginal inclusion probability
+  top_vars <- summarise(plot_df, pip = sum(.data$pp), .by = "var_name") |>
+    arrange(.data$pip) |>
+    pull("var_name")
+
+  if (!missing(max_variables)) {
+    n_keep <- min(max_variables, length(top_vars))
+    top_vars <- top_vars[seq(length(top_vars) - n_keep + 1L, length(top_vars))]
+    plot_df <- plot_df[plot_df$var_name %in% top_vars, , drop = FALSE]
+  }
+
+  # Order y-axis variables by marginal inclusion probability (most frequent at top) or original order
+  if (sort_variables) {
+    var_order <- top_vars
+  } else {
+    var_order <- arrange(plot_df, desc(.data$var_idx)) |>
+      distinct(.data$var_name) |>
+      pull("var_name")
+  }
+
+  plot_df <- mutate(plot_df, var_name = factor(.data$var_name, levels=var_order), y_num = as.numeric(.data$var_name))
+
+  ggplot(plot_df) +
+    geom_rect(aes(xmin = .data$xmin, xmax = .data$xmax, ymin = .data$y_num - 0.45, ymax = .data$y_num + 0.45), fill = "black", color = NA) +
+    scale_x_continuous(expand = c(0.01, 0), limits = c(0, max(models_df$xmax)) ) +
+    scale_y_continuous(breaks = seq_along(var_order), labels = var_order, expand = c(0.02, 0.02)) +
+    labs(x = "Cumulative Posterior Model Probability", y = NULL) +
+    theme_bw() +
+    theme(panel.grid.major.x = element_blank(),
+      panel.grid.minor = element_blank(),
+      panel.grid.major.y = element_line(color = "grey90", linewidth = 0.4),
+      axis.text.y = element_text(size = 10),
+      text = element_text(size = 14),
+    )
+
 }
 )
 

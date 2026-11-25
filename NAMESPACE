@@ -11,6 +11,11 @@ importFrom(Rcpp, evalCpp)
 importFrom("graphics", "abline", "lines", "legend")
 importFrom("grDevices", "devAskNewPage")
 
+importFrom(dplyr, arrange, desc, distinct, mutate, pull, row_number, summarise)
+importFrom(ggplot2, aes, element_blank, element_line, element_text, geom_rect, ggplot, labs, scale_x_continuous, scale_y_continuous, theme, theme_bw)
+importFrom(rlang, .data)
+importFrom(tidyr, separate_longer_delim)
+
 useDynLib(modelSelection, .registration=TRUE)
 
 
@@ -57,7 +62,7 @@ export(plotprior)
 S3method(plot,msfit)
 S3method(plot,msfit_ggm)
 
-export(postProb, postSamples)
+export(postProb, postProbPlot, postSamples)
 
 S3method(predict, icfit)
 S3method(predict, msfit)
